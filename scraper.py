@@ -26,7 +26,6 @@ def parse_sqft(size_str: str) -> float:
     return float(match.group(1)) if match else 0.0
 
 def clean_address_string(raw_addr: str) -> str:
-    """清理地址字串，剔除『依現場社區名稱』等前綴廣告詞"""
     if not raw_addr:
         return "未提供地址"
     clean = raw_addr.replace("依現場社區名稱", "").replace("社區名稱", "").strip()
@@ -159,18 +158,15 @@ class RentalScraper:
                         page.wait_for_timeout(800)
 
                     items = page.eval_on_selector_all(
-                        "section.vue-list-rent-item, div.item, a[href*='rent.591.com.tw']",
+                        "div.item-info-title a, a.item-title",
                         """elements => elements.map(el => {
-                            let text = el.innerText || '';
-                            let titleEl = el.querySelector('a.item-title, .title, .house-title, h3');
-                            let priceEl = el.querySelector('.price, .item-price, strong');
-                            let linkEl = el.querySelector('a[href*="rent.591.com.tw"]');
+                            let container = el.closest('section, div.item, div.list-item, div.rent-item, div.item-info') || el.parentElement.parentElement;
+                            let text = container ? container.innerText : el.innerText;
                             
                             return {
                                 full_text: text,
-                                title: titleEl ? titleEl.innerText.trim() : text.split('\\n')[0],
-                                price: priceEl ? priceEl.innerText.trim() : '',
-                                link: linkEl ? linkEl.href : ''
+                                title: el.innerText.trim(),
+                                link: el.href
                             };
                         })"""
                     )
@@ -218,7 +214,7 @@ class RentalScraper:
                         exact_addr, details_text = self.fetch_detail_info(page, house_id, raw_address)
                         combined_text = f"{full_text} {details_text}"
 
-                        price_match = re.search(r'([\d,]+)\s*元', item.get("price", ""))
+                        price_match = re.search(r'([\d,]+)\s*元', full_text)
                         price_str = f"{price_match.group(1)}元/月" if price_match else "未標示租金"
 
                         size_str = f"{size_match.group(1)}坪" if size_match else "未標示坪數"
