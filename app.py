@@ -193,7 +193,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         .btn-link {
-            display block; width: 100%; text-align: center; background: rgba(255, 255, 255, 0.08);
+            display: block; width: 100%; text-align: center; background: rgba(255, 255, 255, 0.08);
             border: 1px solid var(--card-border); color: var(--text-main); padding: 10px;
             border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; margin-top: 14px; transition: all 0.2s;
         }
@@ -207,7 +207,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <header>
             <div class="brand">
                 <h1 id="pageHeading">🏠 OurHome 租屋品質與成本儀表板</h1>
-                <p>雲端 24H 自動巡邏與動態區域過濾比價</p>
+                <p>雲端 24H 自動巡邏與同義字智慧模糊搜尋</p>
             </div>
             <button class="refresh-btn" onclick="fetchHouses()">🔄 立即刷新</button>
         </header>
@@ -232,7 +232,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
 
         <div class="controls-card">
-            <input type="text" id="searchInput" class="search-box" placeholder="🔍 輸入關鍵字或路名搜尋 (如：忠孝東路、北安路、板橋、獨洗、台電...)" oninput="filterAndRender()">
+            <input type="text" id="searchInput" class="search-box" placeholder="🔍 輸入關鍵字或路名 (輸入『租補』可自動連同『租屋補助/租金補貼/社宅』一併搜尋...)" oninput="filterAndRender()">
 
             <div class="filters-row">
                 <div class="pill-group" id="filterPills">
@@ -256,6 +256,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <script>
         let allHouses = [];
         let currentFilter = 'all';
+
+        const SUBSIDY_KEYWORDS = ["租補", "租屋補助", "租金補貼", "補助", "社宅", "補貼"];
+        const BALCONY_KEYWORDS = ["陽台", "獨陽", "獨立陽台"];
+        const WASHING_KEYWORDS = ["洗衣機", "獨洗", "獨立洗衣機"];
+        const TAIPOWER_KEYWORDS = ["台電", "依台電", "台電計費"];
 
         async function fetchHouses() {
             try {
@@ -290,6 +295,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             const fixedPillsHtml = `
                 <div class="pill ${currentFilter === 'all' ? 'active' : ''}" data-filter="all" onclick="setFilter('all', this)">全部房源</div>
+                <div class="pill ${currentFilter === 'subsidy' ? 'active' : ''}" data-filter="subsidy" onclick="setFilter('subsidy', this)">📜 可租補 / 租屋補助</div>
                 <div class="pill ${currentFilter === 'taipower' ? 'active' : ''}" data-filter="taipower" onclick="setFilter('taipower', this)">✨ 台電神房</div>
                 <div class="pill ${currentFilter === 'balcony' ? 'active' : ''}" data-filter="balcony" onclick="setFilter('balcony', this)">🧺 有獨立陽台</div>
                 <div class="pill ${currentFilter === 'washing' ? 'active' : ''}" data-filter="washing" onclick="setFilter('washing', this)">🧺 有獨立洗衣機</div>
@@ -338,18 +344,38 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             return rawAddr.replace(/^.*?(依現場|社區名稱|所屬社區|高樓層|電梯大樓)/g, '').trim() || rawAddr;
         }
 
+        function isSubsidyHouse(fullText) {
+            return SUBSIDY_KEYWORDS.some(kw => fullText.includes(kw));
+        }
+
         function filterAndRender() {
             const searchText = document.getElementById('searchInput').value.toLowerCase().trim();
             const sortVal = document.getElementById('sortSelect').value;
 
             let filtered = allHouses.filter(h => {
                 const cleanAddr = cleanAddressDisplay(h.address);
-                const fullStr = `${h.title} ${cleanAddr} ${h.price} ${h.size} ${h.house_id}`.toLowerCase();
-                if (searchText && !fullStr.includes(searchText)) return false;
+                const fullText = `${h.title} ${cleanAddr} ${h.price} ${h.size} ${h.house_id} ${h.details_text || ''}`.toLowerCase();
+                
+                if (searchText) {
+                    let matchesSearch = fullText.includes(searchText);
+                    if (!matchesSearch) {
+                        if (SUBSIDY_KEYWORDS.some(kw => searchText.includes(kw))) {
+                            matchesSearch = isSubsidyHouse(fullText);
+                        } else if (BALCONY_KEYWORDS.some(kw => searchText.includes(kw))) {
+                            matchesSearch = BALCONY_KEYWORDS.some(kw => fullText.includes(kw));
+                        } else if (WASHING_KEYWORDS.some(kw => searchText.includes(kw))) {
+                            matchesSearch = WASHING_KEYWORDS.some(kw => fullText.includes(kw));
+                        } else if (TAIPOWER_KEYWORDS.some(kw => searchText.includes(kw))) {
+                            matchesSearch = TAIPOWER_KEYWORDS.some(kw => fullText.includes(kw));
+                        }
+                    }
+                    if (!matchesSearch) return false;
+                }
 
+                if (currentFilter === 'subsidy') return isSubsidyHouse(fullText);
                 if (currentFilter === 'taipower') return h.cost_info && h.cost_info.is_taipower;
-                if (currentFilter === 'balcony') return h.couples_features && h.couples_features.some(f => f.includes('陽台'));
-                if (currentFilter === 'washing') return h.couples_features && h.couples_features.some(f => f.includes('洗衣機'));
+                if (currentFilter === 'balcony') return BALCONY_KEYWORDS.some(kw => fullText.includes(kw));
+                if (currentFilter === 'washing') return WASHING_KEYWORDS.some(kw => fullText.includes(kw));
                 if (currentFilter !== 'all') return (h.address || '').includes(currentFilter);
 
                 return true;
@@ -386,11 +412,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const warnings = h.couples_warnings || [];
                 const features = h.couples_features || [];
                 const cleanAddr = cleanAddressDisplay(h.address);
+                const fullText = `${h.title} ${cleanAddr} ${h.details_text || ''}`;
+                const hasSubsidy = isSubsidyHouse(fullText);
 
                 return `
                     <div class="house-card">
                         <div class="card-header">
-                            ${cost.is_taipower ? '<div class="badge-taipower">✨ 台電省錢神房 (台電計費)</div>' : '<div class="badge-normal">🏠 特選優質物件</div>'}
+                            ${hasSubsidy ? '<div class="badge-taipower" style="background:rgba(16, 185, 129, 0.15); color:#34d399; border-color:rgba(16, 185, 129, 0.3);">📜 可申請租屋補助</div>' : ''}
+                            ${cost.is_taipower ? '<div class="badge-taipower">✨ 台電省錢神房 (台電計費)</div>' : (!hasSubsidy ? '<div class="badge-normal">🏠 特選優質物件</div>' : '')}
                             <a href="${h.link}" target="_blank" class="house-title">${h.title}</a>
                         </div>
                         <div class="meta-pills">
@@ -410,7 +439,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         </div>
                         <div class="tags-section">
                             ${warnings.map(w => `<div class="tag-warning">${w}</div>`).join('')}
-                            <div>${features.map(f => `<span class="tag-feature">${f}</span>`).join('')}</div>
+                            <div>
+                                ${hasSubsidy ? '<span class="tag-feature" style="background:rgba(16, 185, 129, 0.15); color:#34d399;">📜 可租屋補助</span>' : ''}
+                                ${features.map(f => `<span class="tag-feature">${f}</span>`).join('')}
+                            </div>
                         </div>
                         <a href="${h.link}" target="_blank" class="btn-link">🔗 一鍵直達 591 房屋頁面 ➔</a>
                     </div>
