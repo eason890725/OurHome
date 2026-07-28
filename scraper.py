@@ -84,34 +84,39 @@ class RentalScraper:
                 return True
         return False
 
-    def fetch_detail_info(self, page, house_id: str, current_addr: str) -> Tuple[str, str]:
-        """點入內頁提取 100% 真實街道地址與『管理費』、『額外費用』、『電費』等細項內文"""
+    def fetch_detail_info(self, house_id: str, current_addr: str) -> Tuple[str, str]:
+        """使用輕量級 HTTP 請求在 0.3 秒內迅速擷取內頁真實街道地址與費用細項（極速省記憶體）"""
         url = f"https://rent.591.com.tw/{house_id}"
         exact_address = clean_address_string(current_addr)
         details_text = ""
         
+        headers = {
+            "User-Agent": random.choice(USER_AGENTS),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7"
+        }
+
         try:
-            detail_page = page.context.new_page()
-            detail_page.goto(url, wait_until="domcontentloaded", timeout=15000)
-            detail_page.wait_for_timeout(1800)
+            resp = requests.get(url, headers=headers, timeout=5)
+            if resp.status_code == 200:
+                html_text = resp.text
+                
+                # 1. 抓取真實地址
+                m_addr = re.search(r'地\s*址[：:\s]*([^<"\n]+)', html_text)
+                if m_addr:
+                    exact_address = clean_address_string(m_addr.group(1).strip())
+                else:
+                    m_map = re.search(r'((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉][\s\-–—─]*[\u4e00-\u9fa5\dA-Za-z]+(?:路|街|段|巷|弄|號|大道)?)', html_text)
+                    if m_map:
+                        exact_address = clean_address_string(m_map.group(1).strip())
 
-            body_text = detail_page.inner_text("body")
+                # 2. 抓取費用細項說明
+                clean_lines = [re.sub(r'<[^>]+>', ' ', l).strip() for l in html_text.split('\n') if l.strip()]
+                fee_lines = [l for l in clean_lines if any(k in l for k in ["費用", "管理費", "電費", "水費", "租金包含", "元/月", "一度", "額外費用"])]
+                details_text = " ".join(fee_lines[:15])
 
-            elem = detail_page.query_selector("div.load-map, span.load-map, div.address-info, span.address")
-            if elem:
-                exact_address = clean_address_string(elem.inner_text().strip())
-            else:
-                m = re.search(r'地\s*址[：:\s]*([\u4e00-\u9fa5A-Za-z0-9\s\-─—–巷弄號段路街區市縣]+)', body_text)
-                if m:
-                    exact_address = clean_address_string(m.group(1).split("\n")[0].strip())
-
-            lines = [line.strip() for line in body_text.split('\n') if line.strip()]
-            fee_lines = [l for l in lines if any(k in l for k in ["費用", "管理費", "電費", "水費", "租金包含", "元/月", "一度"])]
-            details_text = " ".join(fee_lines[:15])
-
-            detail_page.close()
         except Exception as e:
-            logger.debug(f"內頁資訊補充失敗 [{house_id}]: {e}")
+            logger.debug(f"HTTP GET 補充內頁失敗 [{house_id}]: {e}")
 
         return exact_address, details_text
 
@@ -215,10 +220,11 @@ class RentalScraper:
                         if addr_match:
                             raw_address = addr_match.group(1)
 
-                        exact_addr, details_text = self.fetch_detail_info(page, house_id, raw_address)
+                        # 秒級極速補充內頁地址與費用
+                        exact_addr, details_text = self.fetch_detail_info(house_id, raw_address)
                         combined_text = f"{full_text} {details_text}"
 
-                        # --- 精準租金解析（排除「降500元」或「降1200元」之降價標籤干擾）---
+                        # 精準租金解析（排除「降500元」或「降1200元」之降價標籤干擾）
                         real_price = 0
                         dom_p_match = re.search(r'([\d,]+)\s*元', price_text)
                         if dom_p_match:
