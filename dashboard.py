@@ -13,6 +13,7 @@ from config import DB_PATH
 
 logger = logging.getLogger(__name__)
 
+PORT = 5000
 db = HousingDB(DB_PATH)
 scraper = RentalScraper()
 
@@ -226,7 +227,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
 
         <div class="controls-card">
-            <input type="text" id="searchInput" class="search-box" placeholder="🔍 輸入關鍵字或路名搜尋 (如：忠孝東路、北安路、大安、獨洗、台電...)" oninput="filterAndRender()">
+            <input type="text" id="searchInput" class="search-box" placeholder="🔍 輸入關鍵字或路名搜尋 (如：忠孝東路、北安路、板橋、獨洗、台電...)" oninput="filterAndRender()">
 
             <div class="filters-row">
                 <div class="pill-group" id="filterPills">
@@ -428,7 +429,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
-def run_dashboard_server(port: int = 5000):
+def run_dashboard_server(port: int = PORT):
     server_address = ("0.0.0.0", port)
     httpd = HTTPServer(server_address, DashboardRequestHandler)
     logger.info(f"🌐 OurHome Web 儀表板成功啟動！請存取: http://localhost:{port}")
@@ -436,4 +437,4 @@ def run_dashboard_server(port: int = 5000):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    run_dashboard_server(5000)
+    run_dashboard_server(PORT)
