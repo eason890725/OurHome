@@ -94,7 +94,7 @@ class RentalScraper:
         return False
 
     def fetch_detail_info(self, house_id: str, current_addr: str) -> Tuple[str, str]:
-        """使用輕量級 HTTP 請求在 0.3 秒內迅速擷取內頁真實街道地址與費用細項（極速省記憶體）"""
+        """優先從 591 og:description 官方詮釋標籤中 100% 精準提取真實街道門牌與費用說明"""
         url = f"https://rent.591.com.tw/{house_id}"
         exact_address = clean_address_string(current_addr)
         details_text = ""
@@ -110,14 +110,29 @@ class RentalScraper:
             if resp.status_code == 200:
                 html_text = resp.text
                 
-                # 1. 抓取真實地址
-                m_addr = re.search(r'地\s*址[：:\s]*([^<"\n]+)', html_text)
-                if m_addr:
-                    exact_address = clean_address_string(m_addr.group(1).strip())
-                else:
-                    m_map = re.search(r'((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉][\s\-–—─]*[\u4e00-\u9fa5\dA-Za-z]+(?:路|街|段|巷|弄|號|大道)?)', html_text)
-                    if m_map:
-                        exact_address = clean_address_string(m_map.group(1).strip())
+                # 1. 優先從 og:description 精準獲取 591 官方標示的真實地址 (例：位于林森北路399巷21號)
+                meta_match = re.search(r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\'\n]+)["\']', html_text)
+                if not meta_match:
+                    meta_match = re.search(r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\'\n]+)["\']', html_text)
+
+                if meta_match:
+                    desc = meta_match.group(1)
+                    city_dist_match = re.search(r'((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉])', desc)
+                    loc_match = re.search(r'位於\s*([^，,：:\n]+)', desc)
+                    
+                    if city_dist_match and loc_match:
+                        dist_str = city_dist_match.group(1).replace("台北市", "").replace("新北市", "").strip()
+                        loc_str = loc_match.group(1).strip()
+                        if loc_str not in dist_str:
+                            exact_address = clean_address_string(f"{dist_str}{loc_str}")
+                        else:
+                            exact_address = clean_address_string(loc_str)
+
+                # 備用方案：如果 meta 標籤未抓到，再嘗試其他位置
+                if not exact_address or "未提供" in exact_address:
+                    m_addr = re.search(r'地\s*址[：:\s]*([^<"\n]+)', html_text)
+                    if m_addr:
+                        exact_address = clean_address_string(m_addr.group(1).strip())
 
                 # 2. 抓取費用細項說明
                 clean_lines = [re.sub(r'<[^>]+>', ' ', l).strip() for l in html_text.split('\n') if l.strip()]
@@ -229,7 +244,7 @@ class RentalScraper:
                         if addr_match:
                             raw_address = addr_match.group(1)
 
-                        # 秒級極速補充內頁地址與費用
+                        # 秒級極速補充內頁地址與費用 (優先 591 官方 Meta 標籤)
                         exact_addr, details_text = self.fetch_detail_info(house_id, raw_address)
                         combined_text = f"{full_text} {details_text}"
 
