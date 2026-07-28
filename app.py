@@ -207,7 +207,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <header>
             <div class="brand">
                 <h1>👩‍❤️‍👨 OurHome 雙人同住租屋網頁儀表板</h1>
-                <p>雲端 24H 自動巡邏台北市 5 區特選房源與台電省錢神房</p>
+                <p>雲端 24H 自動巡邏與動態區域過濾比價</p>
             </div>
             <button class="refresh-btn" onclick="fetchHouses()">🔄 立即刷新</button>
         </header>
@@ -232,19 +232,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
 
         <div class="controls-card">
-            <input type="text" id="searchInput" class="search-box" placeholder="🔍 輸入關鍵字或路名搜尋 (如：忠孝東路、北安路、大安、獨洗、台電...)" oninput="filterAndRender()">
+            <input type="text" id="searchInput" class="search-box" placeholder="🔍 輸入關鍵字或路名搜尋 (如：忠孝東路、北安路、板橋、獨洗、台電...)" oninput="filterAndRender()">
 
             <div class="filters-row">
                 <div class="pill-group" id="filterPills">
-                    <div class="pill active" data-filter="all" onclick="setFilter('all', this)">全部房源</div>
-                    <div class="pill" data-filter="taipower" onclick="setFilter('taipower', this)">✨ 台電神房</div>
-                    <div class="pill" data-filter="balcony" onclick="setFilter('balcony', this)">🧺 有獨立陽台</div>
-                    <div class="pill" data-filter="washing" onclick="setFilter('washing', this)">🧺 有獨立洗衣機</div>
-                    <div class="pill" data-filter="大安區" onclick="setFilter('大安區', this)">📍 大安區</div>
-                    <div class="pill" data-filter="中山區" onclick="setFilter('中山區', this)">📍 中山區</div>
-                    <div class="pill" data-filter="信義區" onclick="setFilter('信義區', this)">📍 信義區</div>
-                    <div class="pill" data-filter="松山區" onclick="setFilter('松山區', this)">📍 松山區</div>
-                    <div class="pill" data-filter="南港區" onclick="setFilter('南港區', this)">📍 南港區</div>
+                    <!-- 動態生成地區標籤 -->
                 </div>
 
                 <select id="sortSelect" class="sort-select" onchange="filterAndRender()">
@@ -269,11 +261,38 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             try {
                 const res = await fetch('/api/houses');
                 allHouses = await res.json();
+                renderDynamicDistrictPills();
                 updateStats();
                 filterAndRender();
             } catch (err) {
                 console.error("載入房屋列表失敗:", err);
             }
+        }
+
+        function renderDynamicDistrictPills() {
+            const pillGroup = document.getElementById('filterPills');
+            const districts = new Set();
+
+            allHouses.forEach(h => {
+                const addr = h.address || '';
+                const match = addr.match(/([\\u4e00-\\u9fa5]{2,3}[區市縣鄉鎮])/);
+                if (match) {
+                    districts.add(match[1]);
+                }
+            });
+
+            const fixedPillsHtml = `
+                <div class="pill ${currentFilter === 'all' ? 'active' : ''}" data-filter="all" onclick="setFilter('all', this)">全部房源</div>
+                <div class="pill ${currentFilter === 'taipower' ? 'active' : ''}" data-filter="taipower" onclick="setFilter('taipower', this)">✨ 台電神房</div>
+                <div class="pill ${currentFilter === 'balcony' ? 'active' : ''}" data-filter="balcony" onclick="setFilter('balcony', this)">🧺 有獨立陽台</div>
+                <div class="pill ${currentFilter === 'washing' ? 'active' : ''}" data-filter="washing" onclick="setFilter('washing', this)">🧺 有獨立洗衣機</div>
+            `;
+
+            const districtPillsHtml = Array.from(districts).sort().map(d => `
+                <div class="pill ${currentFilter === d ? 'active' : ''}" data-filter="${d}" onclick="setFilter('${d}', this)">📍 ${d}</div>
+            `).join('');
+
+            pillGroup.innerHTML = fixedPillsHtml + districtPillsHtml;
         }
 
         function updateStats() {
@@ -314,7 +333,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 if (currentFilter === 'taipower') return h.cost_info && h.cost_info.is_taipower;
                 if (currentFilter === 'balcony') return h.couples_features && h.couples_features.some(f => f.includes('陽台'));
                 if (currentFilter === 'washing') return h.couples_features && h.couples_features.some(f => f.includes('洗衣機'));
-                if (['大安區', '中山區', '信義區', '松山區', '南港區'].includes(currentFilter)) return fullStr.includes(currentFilter.toLowerCase());
+                if (currentFilter !== 'all') return fullStr.includes(currentFilter.toLowerCase());
 
                 return true;
             });
@@ -366,7 +385,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                             <div class="cost-amount">${cost.total_estimated_cost_str || h.price}</div>
                             <div class="cost-details">
                                 <div>💰 租金: ${h.price}</div>
-                                <div>🏢 管理費: ${cost.management_desc || '0元'}</div>
+                                <div>🏢 管理費/額外費: ${cost.management_desc || '0元'}</div>
                                 <div>⚡ 電費: ${cost.electricity_desc || '內含'}</div>
                                 <div>💧 水雜費: ${cost.water_desc || '0元'}</div>
                             </div>

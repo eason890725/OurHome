@@ -14,17 +14,22 @@ def parse_numeric(val_str: str) -> int:
 def parse_rental_costs(text: str, price_str: str) -> Dict[str, Any]:
     """
     雙人同住模式：
-    從房屋標題與內文中萃取費用細項並估算預估月總成本。
+    從房屋標題、內文及591結構化文字中萃取費用細項（包含『另有額外費用X元/月』）並估算預估月總成本。
     假設情境：雙人每月用電 400 度。
     """
     full_text = text or ""
     rent = parse_numeric(price_str)
 
-    # 1. 解析管理費 (Management Fee)
+    # 1. 解析管理費 / 另有額外費用 (Management / Extra Fees)
     management_fee = 0
     management_desc = "內含 / 無管理費"
     
-    if re.search(r'(含管|包管|內含管理費|含管理費|免管理費|無管理費|不收管理費)', full_text):
+    # 優先匹配 591 特有的『另有額外費用X元/月』標籤
+    extra_match = re.search(r'(?:另有)?額外費用[：:\s]*([\d,]+)\s*元', full_text)
+    if extra_match:
+        management_fee = parse_numeric(extra_match.group(1))
+        management_desc = f"額外費用/管理費 {management_fee:,} 元/月"
+    elif re.search(r'(含管|包管|內含管理費|含管理費|免管理費|無管理費|不收管理費)', full_text):
         management_fee = 0
         management_desc = "內含 (0 元)"
     else:
@@ -48,7 +53,6 @@ def parse_rental_costs(text: str, price_str: str) -> Dict[str, Any]:
         electricity_fee = 1000  # 台電 400 度夏季平均約 1,000 元/月
         electricity_desc = "台電帳單計費 (400度約 1,000 元/月)"
     else:
-        # 尋找一度 X 元 (例如: 一度 5 元, 1度 6.5元, 電費 5元/度)
         rate_match = re.search(r'(?:一度|1度|電費|電費一度)[：:\s]*([\d\.]+)\s*元', full_text)
         if not rate_match:
             rate_match = re.search(r'([\d\.]+)\s*元\s*/?\s*(?:度|kWh)', full_text)
@@ -83,7 +87,7 @@ def parse_rental_costs(text: str, price_str: str) -> Dict[str, Any]:
         other_fees = parse_numeric(trash_match.group(1))
         other_desc = f"垃圾/清潔費 {other_fees:,} 元/月"
 
-    # 5. 公式：預估月總成本 = 租金 + 管理費 + 預估電費 (400度) + 水費 + 其他雜費
+    # 5. 公式：預估月總成本 = 租金 + 管理費/額外費用 + 預估電費 (400度) + 水費 + 其他雜費
     total_estimated_monthly_cost = rent + management_fee + electricity_fee + water_fee + other_fees
 
     return {
@@ -103,7 +107,6 @@ def parse_rental_costs(text: str, price_str: str) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    
-    sample_text = "【信義區雙人套房】刊登租金 25,000 元，管理費 1,500 元，台電計費，包水"
-    res = parse_rental_costs(sample_text, "25,000 元/月")
-    print("雙人 400 度預估測試 (台電):", res['total_estimated_cost_str'], "is_taipower:", res['is_taipower'])
+    sample_text = "14,500 元/月 二個月 租金包含水費、網路、瓦斯費，另有額外費用800元/月 總支出試算"
+    res = parse_rental_costs(sample_text, "14,500元/月")
+    print("額外費用 800 元解析測試:", res['management_desc'], "總估算成本:", res['total_estimated_cost_str'])
