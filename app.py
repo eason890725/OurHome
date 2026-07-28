@@ -209,7 +209,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <h1 id="pageHeading">🏠 OurHome 租屋品質與成本儀表板</h1>
                 <p>雲端 24H 自動巡邏與同義字智慧模糊搜尋</p>
             </div>
-            <button class="refresh-btn" onclick="fetchHouses()">🔄 立即刷新</button>
+            <button class="refresh-btn" onclick="fetchHouses()">🔄 列車刷新</button>
         </header>
 
         <div class="stats-grid">
@@ -232,7 +232,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
 
         <div class="controls-card">
-            <input type="text" id="searchInput" class="search-box" placeholder="🔍 輸入關鍵字或路名 (輸入『租補』可自動連同『租屋補助/租金補貼/社宅』一併搜尋...)" oninput="filterAndRender()">
+            <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋框支援同義字自動連動 (輸入『租補』可自動找出『租屋補助/租金補貼/社宅/補助』的所有房源)..." oninput="filterAndRender()">
 
             <div class="filters-row">
                 <div class="pill-group" id="filterPills">
@@ -257,10 +257,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         let allHouses = [];
         let currentFilter = 'all';
 
-        const SUBSIDY_KEYWORDS = ["租補", "租屋補助", "租金補貼", "補助", "社宅", "補貼"];
-        const BALCONY_KEYWORDS = ["陽台", "獨陽", "獨立陽台"];
-        const WASHING_KEYWORDS = ["洗衣機", "獨洗", "獨立洗衣機"];
-        const TAIPOWER_KEYWORDS = ["台電", "依台電", "台電計費"];
+        const SYNONYM_GROUPS = [
+            ["租補", "租屋補助", "租金補貼", "補助", "社宅", "補貼", "可補"],
+            ["陽台", "獨陽", "獨立陽台", "陽臺"],
+            ["洗衣機", "獨洗", "獨立洗衣機", "洗脫"],
+            ["台電", "依台電", "台電計費", "台灣電力"]
+        ];
 
         async function fetchHouses() {
             try {
@@ -345,37 +347,40 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         function isSubsidyHouse(fullText) {
-            return SUBSIDY_KEYWORDS.some(kw => fullText.includes(kw));
+            const subsidyTerms = SYNONYM_GROUPS[0];
+            return subsidyTerms.some(kw => fullText.includes(kw));
+        }
+
+        function getExpandedSearchTerms(input) {
+            if (!input) return [];
+            let terms = [input];
+            
+            for (const group of SYNONYM_GROUPS) {
+                if (group.some(kw => input.includes(kw) || kw.includes(input))) {
+                    terms.push(...group);
+                }
+            }
+            return Array.from(new Set(terms));
         }
 
         function filterAndRender() {
             const searchText = document.getElementById('searchInput').value.toLowerCase().trim();
             const sortVal = document.getElementById('sortSelect').value;
+            const expandedTerms = getExpandedSearchTerms(searchText);
 
             let filtered = allHouses.filter(h => {
                 const cleanAddr = cleanAddressDisplay(h.address);
                 const fullText = `${h.title} ${cleanAddr} ${h.price} ${h.size} ${h.house_id} ${h.details_text || ''}`.toLowerCase();
                 
                 if (searchText) {
-                    let matchesSearch = fullText.includes(searchText);
-                    if (!matchesSearch) {
-                        if (SUBSIDY_KEYWORDS.some(kw => searchText.includes(kw))) {
-                            matchesSearch = isSubsidyHouse(fullText);
-                        } else if (BALCONY_KEYWORDS.some(kw => searchText.includes(kw))) {
-                            matchesSearch = BALCONY_KEYWORDS.some(kw => fullText.includes(kw));
-                        } else if (WASHING_KEYWORDS.some(kw => searchText.includes(kw))) {
-                            matchesSearch = WASHING_KEYWORDS.some(kw => fullText.includes(kw));
-                        } else if (TAIPOWER_KEYWORDS.some(kw => searchText.includes(kw))) {
-                            matchesSearch = TAIPOWER_KEYWORDS.some(kw => fullText.includes(kw));
-                        }
-                    }
-                    if (!matchesSearch) return false;
+                    const matchesAnyTerm = expandedTerms.some(term => fullText.includes(term));
+                    if (!matchesAnyTerm) return false;
                 }
 
                 if (currentFilter === 'subsidy') return isSubsidyHouse(fullText);
                 if (currentFilter === 'taipower') return h.cost_info && h.cost_info.is_taipower;
-                if (currentFilter === 'balcony') return BALCONY_KEYWORDS.some(kw => fullText.includes(kw));
-                if (currentFilter === 'washing') return WASHING_KEYWORDS.some(kw => fullText.includes(kw));
+                if (currentFilter === 'balcony') return SYNONYM_GROUPS[1].some(kw => fullText.includes(kw));
+                if (currentFilter === 'washing') return SYNONYM_GROUPS[2].some(kw => fullText.includes(kw));
                 if (currentFilter !== 'all') return (h.address || '').includes(currentFilter);
 
                 return true;
