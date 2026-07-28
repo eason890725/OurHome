@@ -26,12 +26,21 @@ def parse_sqft(size_str: str) -> float:
     return float(match.group(1)) if match else 0.0
 
 def clean_address_string(raw_addr: str) -> str:
+    """清理地址字串，剔除『依現場』等前綴與『整層住家出租』等後綴噪訊字詞"""
     if not raw_addr:
         return "未提供地址"
-    clean = raw_addr.replace("依現場社區名稱", "").replace("社區名稱", "").strip()
+    
+    clean = re.sub(r'^(?:依現場|社區名稱|所屬社區|高樓層|電梯大樓|大廈|無|未知)+', '', raw_addr).strip()
+    clean = re.sub(r'(?:整層住家出租|整層住家|獨立套房出租|獨立套房|分租套房|雅房|住家出租|住家|出租)+$', '', clean).strip()
+
     match = re.search(r'((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉][\s\-–—─]*[\u4e00-\u9fa5\dA-Za-z]+(?:路|街|段|巷|弄|號|大道)?)', clean)
     if match:
         return match.group(1).replace("-", " ").strip()
+    
+    dist_match = re.search(r'((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉])', clean)
+    if dist_match:
+        return dist_match.group(1).strip()
+
     return clean if clean else "未提供地址"
 
 class RentalScraper:

@@ -343,7 +343,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         function cleanAddressDisplay(rawAddr) {
             if (!rawAddr) return '未提供地址';
-            return rawAddr.replace(/^.*?(依現場|社區名稱|所屬社區|高樓層|電梯大樓)/g, '').trim() || rawAddr;
+            let clean = rawAddr.replace(/^(依現場|社區名稱|所屬社區|高樓層|電梯大樓|大廈|無|未知)+/g, '').trim();
+            clean = clean.replace(/(整層住家出租|整層住家|獨立套房出租|獨立套房|分租套房|雅房|住家出租|住家|出租)+$/g, '').trim();
+
+            const roadMatch = clean.match(/((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉][\s\-–—─]*[\u4e00-\u9fa5\dA-Za-z]+(?:路|街|段|巷|弄|號|大道)?)/);
+            if (roadMatch) return roadMatch[1].replace(/-/g, ' ').trim();
+
+            const distMatch = clean.match(/((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉])/);
+            if (distMatch) return distMatch[1].trim();
+
+            return clean || '未提供地址';
         }
 
         function isSubsidyHouse(fullText) {
