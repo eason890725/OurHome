@@ -1,0 +1,14 @@
+# SQLite 暫存資料庫
+rentals.db
+*.db
+
+# Python 暫存
+__pycache__/
+*.pyc
+
+# 日誌與快照
+*.log
+scratch/
+
+# Cookies (隱私資訊)
+cookies.json
