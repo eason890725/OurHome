@@ -204,7 +204,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <h1 id="pageHeading">🏠 OurHome 租屋品質與成本儀表板</h1>
                 <p>即時自動巡邏與同義字智慧模糊搜尋</p>
             </div>
-            <button class="refresh-btn" onclick="fetchHouses()">🔄 立即刷新</button>
+            <button class="refresh-btn" onclick="fetchHouses()">🔄 列車刷新</button>
         </header>
 
         <div class="stats-grid">
@@ -252,7 +252,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         let allHouses = [];
         let currentFilter = 'all';
 
-        // 同義字強效對照陣列（搜尋任何一個，自動擴充包含整組詞）
+        // 同義字強效對照陣列
         const SYNONYM_GROUPS = [
             ["租補", "租屋補助", "租金補貼", "補助", "社宅", "補貼", "可補"],
             ["陽台", "獨陽", "獨立陽台", "陽臺"],
@@ -368,7 +368,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const cleanAddr = cleanAddressDisplay(h.address);
                 const fullText = `${h.title} ${cleanAddr} ${h.price} ${h.size} ${h.house_id} ${h.details_text || ''}`.toLowerCase();
                 
-                // 強效同義字比對：只要包含原關鍵字或任何同義擴充詞，即判定命中！
                 if (searchText) {
                     const matchesAnyTerm = expandedTerms.some(term => fullText.includes(term));
                     if (!matchesAnyTerm) return false;
@@ -442,7 +441,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <div class="tags-section">
                             ${warnings.map(w => `<div class="tag-warning">${w}</div>`).join('')}
                             <div>
-                                ${hasSubsidy ? '<span class="tag-feature" style="background:rgba(16, 185, 129, 0.15); color:#34d399;">📜 可租屋補助</span>' : ''}
                                 ${features.map(f => `<span class="tag-feature">${f}</span>`).join('')}
                             </div>
                         </div>

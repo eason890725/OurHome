@@ -445,7 +445,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <div class="tags-section">
                             ${warnings.map(w => `<div class="tag-warning">${w}</div>`).join('')}
                             <div>
-                                ${hasSubsidy ? '<span class="tag-feature" style="background:rgba(16, 185, 129, 0.15); color:#34d399;">📜 可租屋補助</span>' : ''}
                                 ${features.map(f => `<span class="tag-feature">${f}</span>`).join('')}
                             </div>
                         </div>
