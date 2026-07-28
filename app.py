@@ -193,7 +193,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         .btn-link {
-            display: block; width: 100%; text-align: center; background: rgba(255, 255, 255, 0.08);
+            display block; width: 100%; text-align: center; background: rgba(255, 255, 255, 0.08);
             border: 1px solid var(--card-border); color: var(--text-main); padding: 10px;
             border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; margin-top: 14px; transition: all 0.2s;
         }
@@ -236,7 +236,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             <div class="filters-row">
                 <div class="pill-group" id="filterPills">
-                    <!-- 精準行政區標籤將動態渲染於此 -->
+                    <!-- 動態行政區標籤渲染區 -->
                 </div>
 
                 <select id="sortSelect" class="sort-select" onchange="filterAndRender()">
@@ -271,7 +271,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         function renderDynamicDistrictPills() {
             const pillGroup = document.getElementById('filterPills');
-            
             const knownDistricts = [
                 "大安區", "中山區", "信義區", "松山區", "南港區", "內湖區", "士林區", "北投區", "萬華區", "中正區", "大同區", "文山區",
                 "板橋區", "新莊區", "中和區", "永和區", "三重區", "新店區", "土城區", "蘆洲區", "汐止區", "樹林區", "淡水區", "三峽區", "林口區", "鶯歌區", "五股區", "泰山區", "八里區",
@@ -434,7 +433,7 @@ def index():
 def api_houses():
     houses = db.get_all_houses()
     for h in houses:
-        full_text = f"{h.get('title', '')} {h.get('address', '')}"
+        full_text = f"{h.get('title', '')} {h.get('address', '')} {h.get('details_text', '')}"
         h["cost_info"] = parse_rental_costs(full_text, h.get("price", "0"))
         h["couples_warnings"] = scraper.detect_couples_warnings(full_text)
         h["couples_features"] = scraper.detect_couples_features(full_text)
@@ -448,7 +447,7 @@ def background_crawler_loop():
             fetched = scraper.run()
             if fetched:
                 for house in fetched:
-                    full_text = f"{house.get('title', '')} {house.get('address', '')}"
+                    full_text = f"{house.get('title', '')} {house.get('address', '')} {house.get('details_text', '')}"
                     house["cost_info"] = parse_rental_costs(full_text, house.get("price", "0"))
                 batch_res = db.process_houses_batch(fetched)
                 new_houses = batch_res.get("new_houses", [])

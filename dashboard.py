@@ -231,7 +231,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             <div class="filters-row">
                 <div class="pill-group" id="filterPills">
-                    <!-- 精準行政區標籤將動態渲染於此 -->
+                    <!-- 動態行政區標籤渲染區 -->
                 </div>
 
                 <select id="sortSelect" class="sort-select" onchange="filterAndRender()">
@@ -266,8 +266,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         function renderDynamicDistrictPills() {
             const pillGroup = document.getElementById('filterPills');
-            
-            // 台灣標準行政區白名單（精準配對，徹底消除「一中山區」、「樓大安區」、「社區」等雜音）
             const knownDistricts = [
                 "大安區", "中山區", "信義區", "松山區", "南港區", "內湖區", "士林區", "北投區", "萬華區", "中正區", "大同區", "文山區",
                 "板橋區", "新莊區", "中和區", "永和區", "三重區", "新店區", "土城區", "蘆洲區", "汐止區", "樹林區", "淡水區", "三峽區", "林口區", "鶯歌區", "五股區", "泰山區", "八里區",
@@ -435,7 +433,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         elif self.path == "/api/houses":
             houses = db.get_all_houses()
             for h in houses:
-                full_text = f"{h.get('title', '')} {h.get('address', '')}"
+                full_text = f"{h.get('title', '')} {h.get('address', '')} {h.get('details_text', '')}"
                 h["cost_info"] = parse_rental_costs(full_text, h.get("price", "0"))
                 h["couples_warnings"] = scraper.detect_couples_warnings(full_text)
                 h["couples_features"] = scraper.detect_couples_features(full_text)

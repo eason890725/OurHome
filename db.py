@@ -31,7 +31,6 @@ def generate_address_fingerprint(address: str, size_str: str, price_str: str) ->
     
     clean_addr = re.sub(r'(捷運|站|步|分|近|距|約|公尺|高樓層|獨戶|獨立|精緻|電梯|公寓|華廈|隨時|拎包|依現場|社區名稱)', '', address)
     clean_addr = re.sub(r'[\s\-–—─,，.。（）\(\)]', '', clean_addr)
-    
     clean_size = parse_sqft(size_str)
     return f"{clean_addr}_{clean_size}坪" if clean_addr else ""
 
@@ -59,6 +58,7 @@ class HousingDB:
                     link TEXT,
                     address_fingerprint TEXT,
                     price_history TEXT,
+                    details_text TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -72,6 +72,8 @@ class HousingDB:
                 cursor.execute("ALTER TABLE houses ADD COLUMN price_history TEXT")
             if "numeric_price" not in columns:
                 cursor.execute("ALTER TABLE houses ADD COLUMN numeric_price INTEGER")
+            if "details_text" not in columns:
+                cursor.execute("ALTER TABLE houses ADD COLUMN details_text TEXT")
             if "updated_at" not in columns:
                 cursor.execute("ALTER TABLE houses ADD COLUMN updated_at TIMESTAMP")
                 
@@ -87,16 +89,13 @@ class HousingDB:
         s1 = parse_sqft(s1_str)
         s2 = parse_sqft(s2_str)
         
-        # 1. 坪數差超過 1.5 坪 -> 絕對非同物件
         if s1 > 0 and s2 > 0 and abs(s1 - s2) > 1.5:
             return False
 
         price_diff = abs(p1 - p2)
-        # 2. 價格差超過 1500 元 -> 絕對非同物件
         if price_diff > 1500:
             return False
 
-        # 3. 核心比對：若地址相同且坪數接近 (差 <= 0.5坪) 且價格差 <= 1500 元 -> 100% 同物件
         if addr1 and addr2 and "未提供" not in addr1 and "依現場" not in addr1 and addr1 == addr2:
             if s1 > 0 and s2 > 0 and abs(s1 - s2) <= 0.5:
                 logger.info(f"🔁 [相同地址坪數去重] 命中相同地址 ({addr1}) 坪數 ({s1}坪 vs {s2}坪) 重複物件")
@@ -106,12 +105,10 @@ class HousingDB:
         t2_clean = clean_title_tokens(t2)
         ratio = SequenceMatcher(None, t1_clean, t2_clean).ratio()
 
-        # 4. 同一房仲 (如美樂、寄居蟹) 洗版且標題/坪數相似 (ratio > 0.60)
         agency_match = ("美樂" in t1 and "美樂" in t2) or ("寄居蟹" in t1 and "寄居蟹" in t2)
         if agency_match and ratio > 0.60:
             return True
 
-        # 5. 標題高度相似度 (> 70%)
         if ratio > 0.70:
             return True
 
@@ -141,6 +138,7 @@ class HousingDB:
         current_numeric_price = parse_numeric_price(current_price_str)
         address = house_data.get("address", "")
         size = house_data.get("size", "")
+        details_text = house_data.get("details_text", "")
         fingerprint = generate_address_fingerprint(address, size, current_price_str)
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -161,8 +159,8 @@ class HousingDB:
                 ], ensure_ascii=False)
 
                 cursor.execute("""
-                    INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     house_id,
                     title,
@@ -173,6 +171,7 @@ class HousingDB:
                     house_data.get("link", ""),
                     fingerprint,
                     initial_history,
+                    details_text,
                     now_str,
                     now_str
                 ))
@@ -195,12 +194,13 @@ class HousingDB:
 
                     cursor.execute("""
                         UPDATE houses 
-                        SET price = ?, numeric_price = ?, price_history = ?, updated_at = ?
+                        SET price = ?, numeric_price = ?, price_history = ?, details_text = ?, updated_at = ?
                         WHERE house_id = ?
                     """, (
                         current_price_str,
                         current_numeric_price,
                         json.dumps(history, ensure_ascii=False),
+                        details_text,
                         now_str,
                         house_id
                     ))
@@ -242,33 +242,6 @@ class HousingDB:
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
 
-    def clean_duplicates_in_db(self) -> int:
-        houses = self.get_all_houses()
-        kept = []
-        removed_ids = []
-
-        for h in houses:
-            house_id = h.get("house_id", "")
-            is_dup = False
-            for k in kept:
-                if self.is_precise_duplicate(h, k):
-                    is_dup = True
-                    removed_ids.append(house_id)
-                    break
-            if not is_dup:
-                kept.append(h)
-
-        if removed_ids:
-            with self._get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.executemany("DELETE FROM houses WHERE house_id = ?", [(rid,) for rid in removed_ids])
-                conn.commit()
-            logger.info(f"成功清理資料庫中 {len(removed_ids)} 筆既有重複刊登物件！")
-        
-        return len(removed_ids)
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     db = HousingDB("c:/personl/OurHome/rentals.db")
-    count = db.clean_duplicates_in_db()
-    print(f"資料庫歷史重複物件清理完成，一共刪除 {count} 筆重複物件！")

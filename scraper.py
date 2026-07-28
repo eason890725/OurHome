@@ -4,7 +4,7 @@ import re
 import random
 import time
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 import requests
 from playwright.sync_api import sync_playwright
 
@@ -85,36 +85,36 @@ class RentalScraper:
                 return True
         return False
 
-    def fetch_detail_exact_address(self, page, house_id: str, current_addr: str) -> str:
-        """點入內頁或讀取 591 內頁『位置與周邊』地 址 區塊提取精準真實地址"""
-        if current_addr and current_addr != "未提供地址" and "依現場" not in current_addr:
-            return clean_address_string(current_addr)
-            
+    def fetch_detail_info(self, page, house_id: str, current_addr: str) -> Tuple[str, str]:
+        """點入內頁提取 100% 真實街道地址與『管理費』、『額外費用』、『電費』等細項內文"""
         url = f"https://rent.591.com.tw/{house_id}"
+        exact_address = clean_address_string(current_addr)
+        details_text = ""
+        
         try:
             detail_page = page.context.new_page()
             detail_page.goto(url, wait_until="domcontentloaded", timeout=15000)
             detail_page.wait_for_timeout(1800)
 
-            # DOM 選取器優先提取
+            body_text = detail_page.inner_text("body")
+
             elem = detail_page.query_selector("div.load-map, span.load-map, div.address-info, span.address")
             if elem:
-                exact = elem.inner_text().strip()
-                detail_page.close()
-                return clean_address_string(exact)
+                exact_address = clean_address_string(elem.inner_text().strip())
+            else:
+                m = re.search(r'地\s*址[：:\s]*([\u4e00-\u9fa5A-Za-z0-9\s\-─—–巷弄號段路街區市縣]+)', body_text)
+                if m:
+                    exact_address = clean_address_string(m.group(1).split("\n")[0].strip())
 
-            # Regex 備用提取
-            body_text = detail_page.inner_text("body")
-            m = re.search(r'地\s*址[：:\s]*([\u4e00-\u9fa5A-Za-z0-9\s\-─—–巷弄號段路街區市縣]+)', body_text)
+            lines = [line.strip() for line in body_text.split('\n') if line.strip()]
+            fee_lines = [l for l in lines if any(k in l for k in ["費用", "管理費", "電費", "水費", "租金包含", "元/月", "一度"])]
+            details_text = " ".join(fee_lines[:15])
+
             detail_page.close()
-            if m:
-                exact = m.group(1).split("\n")[0].strip()
-                return clean_address_string(exact)
-
         except Exception as e:
-            logger.debug(f"內頁地址補充失敗 [{house_id}]: {e}")
-            
-        return clean_address_string(current_addr)
+            logger.debug(f"內頁資訊補充失敗 [{house_id}]: {e}")
+
+        return exact_address, details_text
 
     def fetch_via_playwright(self) -> List[Dict[str, str]]:
         urls = self.target_urls
@@ -148,127 +148,115 @@ class RentalScraper:
 
             page = context.new_page()
 
-            for idx, url in enumerate(urls, 1):
-                logger.info(f"[{idx}/{len(urls)}] 載入網址: {url}")
-                time.sleep(random.uniform(1.0, 2.0))
-
+            for i, target_url in enumerate(urls, start=1):
                 try:
-                    page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                    page.wait_for_timeout(3500)
+                    logger.info(f"[{i}/{len(urls)}] 載入網址: {target_url}")
+                    page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+                    page.wait_for_timeout(3000)
 
-                    anchors = page.query_selector_all("a[href*='rent.591.com.tw/'], a[href*='detail'], a[href^='/']")
-                    url_results_count = 0
+                    for _ in range(3):
+                        page.evaluate("window.scrollBy(0, 1000);")
+                        page.wait_for_timeout(800)
 
-                    for a in anchors:
-                        href = a.get_attribute("href") or ""
-                        text = a.inner_text().strip()
+                    items = page.eval_on_selector_all(
+                        "section.vue-list-rent-item, div.item, a[href*='rent.591.com.tw']",
+                        """elements => elements.map(el => {
+                            let text = el.innerText || '';
+                            let titleEl = el.querySelector('a.item-title, .title, .house-title, h3');
+                            let priceEl = el.querySelector('.price, .item-price, strong');
+                            let linkEl = el.querySelector('a[href*="rent.591.com.tw"]');
+                            
+                            return {
+                                full_text: text,
+                                title: titleEl ? titleEl.innerText.trim() : text.split('\\n')[0],
+                                price: priceEl ? priceEl.innerText.trim() : '',
+                                link: linkEl ? linkEl.href : ''
+                            };
+                        })"""
+                    )
 
-                        match = re.search(r'(?:detail/|rent\.591\.com\.tw/|/)?(\d{7,10})', href)
-                        if match:
-                            house_id = match.group(1)
-                            if house_id in global_seen_ids:
+                    url_count = 0
+                    for item in items:
+                        full_text = item.get("full_text", "")
+                        link = item.get("link", "")
+                        title = item.get("title", "")
+
+                        id_match = re.search(r'/\w*?(\d{7,8})', link)
+                        if not id_match:
+                            continue
+
+                        house_id = id_match.group(1)
+
+                        if house_id in global_seen_ids:
+                            continue
+
+                        if self.is_invalid_broker_or_ad(title, link):
+                            continue
+
+                        ex_kw = self.contains_exclude_keyword(full_text)
+                        if ex_kw:
+                            logger.info(f"🚫 包含黑名單關鍵字『{ex_kw}』，自動過濾: [{house_id}] {title[:20]}")
+                            continue
+
+                        size_match = re.search(r'(\d+(?:\.\d+)?)\s*坪', full_text)
+                        if size_match:
+                            sqft = float(size_match.group(1))
+                            if sqft < MIN_SIZE_SQFT:
+                                logger.info(f"🚫 坪數 ({sqft} 坪) 小於標準 ({MIN_SIZE_SQFT} 坪)，自動過濾: [{house_id}] {title[:20]}")
                                 continue
 
-                            clean_title = text.split("\n")[0].strip()
+                        if not self.is_in_allowed_sections(full_text):
+                            continue
 
-                            if self.is_invalid_broker_or_ad(clean_title, href):
-                                continue
+                        global_seen_ids.add(house_id)
 
-                            if len(clean_title) <= 2 or "圖" in clean_title or "比較" in clean_title:
-                                continue
+                        raw_address = ""
+                        addr_match = re.search(r'((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉][\s\-–—─]*[\u4e00-\u9fa5\dA-Za-z]+(?:路|街|段|巷|弄|號|大道)?)', full_text)
+                        if addr_match:
+                            raw_address = addr_match.group(1)
 
-                            parent_text = ""
-                            try:
-                                parent = a.evaluate_handle("node => node.closest('section, article, div.item-info, div.vue-list-rent-item, li')").as_element()
-                                if parent:
-                                    parent_text = parent.inner_text()
-                            except Exception:
-                                pass
+                        exact_addr, details_text = self.fetch_detail_info(page, house_id, raw_address)
+                        combined_text = f"{full_text} {details_text}"
 
-                            full_check_text = f"{clean_title}\n{parent_text}"
+                        price_match = re.search(r'([\d,]+)\s*元', item.get("price", ""))
+                        price_str = f"{price_match.group(1)}元/月" if price_match else "未標示租金"
 
-                            if not self.is_in_allowed_sections(full_check_text):
-                                continue
+                        size_str = f"{size_match.group(1)}坪" if size_match else "未標示坪數"
 
-                            hit_kw = self.contains_exclude_keyword(full_check_text)
-                            if hit_kw:
-                                logger.info(f"🚫 命中雙人黑名單『{hit_kw}』，自動跳過: [{house_id}] {clean_title}")
-                                continue
+                        clean_item = {
+                            "house_id": house_id,
+                            "title": title.split("\n")[0].strip(),
+                            "price": price_str,
+                            "numeric_price": parse_numeric_price(price_str),
+                            "address": exact_addr,
+                            "size": size_str,
+                            "link": f"https://rent.591.com.tw/{house_id}",
+                            "details_text": combined_text
+                        }
 
-                            size = "未提供坪數"
-                            size_match = re.search(r'(\d+(?:\.\d+)?\s*坪)', parent_text)
-                            size_num = 0.0
-                            if size_match:
-                                size = size_match.group(1)
-                                size_num = parse_sqft(size)
+                        results.append(clean_item)
+                        url_count += 1
 
-                            if size_num > 0 and size_num < MIN_SIZE_SQFT:
-                                logger.info(f"🚫 坪數 ({size_num} 坪) 小於雙人空間下限 ({MIN_SIZE_SQFT} 坪)，自動跳過: [{house_id}] {clean_title}")
-                                continue
+                    logger.info(f"網頁 [{i}] 成功爬取 {url_count} 筆合格房屋")
 
-                            price = "未提供租金"
-                            price_num = 0
-                            price_match = re.search(r'([\d,]+\s*元/月|[\d,]+\s*元)', parent_text)
-                            if price_match:
-                                price = price_match.group(1)
-                                price_num = parse_numeric_price(price)
-
-                            if RENT_MIN > 0 and price_num > 0 and price_num < RENT_MIN:
-                                continue
-                            if RENT_MAX > 0 and price_num > RENT_MAX:
-                                continue
-
-                            couples_warnings = self.detect_couples_warnings(full_check_text)
-                            couples_features = self.detect_couples_features(full_check_text)
-
-                            raw_address = "未提供地址"
-                            if parent_text:
-                                lines = [l.strip() for l in parent_text.split("\n") if l.strip()]
-                                for line in lines:
-                                    addr_m = re.search(r'((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉][\s\-–—─]*[\u4e00-\u9fa5\dA-Za-z]+(?:路|街|段|巷|弄|號|大道)?)', line)
-                                    if addr_m:
-                                        raw_address = addr_m.group(1).replace("-", " ").strip()
-                                        break
-
-                            # 雙重精準校驗：提取真實內頁完整地址
-                            exact_address = self.fetch_detail_exact_address(page, house_id, raw_address)
-
-                            global_seen_ids.add(house_id)
-                            full_link = f"https://rent.591.com.tw/{house_id}"
-
-                            results.append({
-                                "house_id": house_id,
-                                "title": clean_title,
-                                "price": price,
-                                "address": exact_address,
-                                "size": size,
-                                "link": full_link,
-                                "couples_warnings": couples_warnings,
-                                "couples_features": couples_features
-                            })
-                            url_results_count += 1
-
-                    logger.info(f"網址 [{idx}] 成功提取 {url_results_count} 筆物件")
-
-                except Exception as page_err:
-                    logger.error(f"爬取網址 [{idx}] 時發生錯誤: {page_err}")
+                except Exception as e:
+                    logger.error(f"爬取網址 [{target_url}] 失敗: {e}")
 
             browser.close()
 
-        logger.info(f"🎯 所有網址爬取完畢，總計共成功提取 {len(results)} 筆含真實完整地址之雙人合格物件！")
+        logger.info(f"🎯 所有網址爬取完成，全域共抓取到 {len(results)} 筆合格物件！")
         return results
 
     def run(self) -> List[Dict[str, str]]:
-        sleep_time = random.uniform(1.0, 2.5)
+        sleep_time = random.uniform(1.5, 3.5)
         logger.info(f"執行前隨機延遲 {sleep_time:.2f} 秒 (Anti-scraping sleep)")
         time.sleep(sleep_time)
-
         return self.fetch_via_playwright()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     scraper = RentalScraper()
-    items = scraper.run()
-    print(f"抓取到 {len(items)} 筆含真實地址之雙人合格物件:")
-    for item in items[:5]:
-        print(item)
+    data = scraper.run()
+    print(f"爬取完成，共 {len(data)} 筆:")
+    for d in data[:3]:
+        print(d)
