@@ -1,6 +1,7 @@
 import re
 import logging
 from typing import Dict, Any
+from config import DEFAULT_ELECTRICITY_KWH, MODE_LABEL
 
 logger = logging.getLogger(__name__)
 
@@ -11,20 +12,18 @@ def parse_numeric(val_str: str) -> int:
     clean = re.sub(r'[^\d]', '', str(val_str))
     return int(clean) if clean else 0
 
-def parse_rental_costs(text: str, price_str: str) -> Dict[str, Any]:
+def parse_rental_costs(text: str, price_str: str, electricity_kwh: int = DEFAULT_ELECTRICITY_KWH) -> Dict[str, Any]:
     """
-    雙人同住模式：
+    費用計算器（動態支援單人 200度 / 雙人 400度用電）：
     從房屋標題、內文及591結構化文字中萃取費用細項（包含『另有額外費用X元/月』）並估算預估月總成本。
-    假設情境：雙人每月用電 400 度。
     """
     full_text = text or ""
     rent = parse_numeric(price_str)
 
-    # 1. 解析管理費 / 另有額外費用 (Management / Extra Fees)
+    # 1. 解析管理費 / 另有額外費用
     management_fee = 0
     management_desc = "內含 / 無管理費"
     
-    # 優先匹配 591 特有的『另有額外費用X元/月』標籤
     extra_match = re.search(r'(?:另有)?額外費用[：:\s]*([\d,]+)\s*元', full_text)
     if extra_match:
         management_fee = parse_numeric(extra_match.group(1))
@@ -43,15 +42,15 @@ def parse_rental_costs(text: str, price_str: str) -> Dict[str, Any]:
         else:
             management_desc = "內含 / 未標示"
 
-    # 2. 解析電費 (Electricity Rate) - 雙人同住假設每月 400 度
+    # 2. 解析電費 (單人預設 200度，雙人預設 400度)
     is_taipower = False
-    electricity_fee = 2000  # 預設非台電 5 元 * 400 度 = 2,000 元
-    electricity_desc = "約 2,000 元 (預估一度5元/400度)"
+    electricity_fee = electricity_kwh * 5  # 預設非台電 5 元/度
+    electricity_desc = f"約 {electricity_fee:,} 元 (預估一度5元/{electricity_kwh}度)"
 
     if re.search(r'(台電|依台電|台電計費|公電分攤|台灣電力)', full_text):
         is_taipower = True
-        electricity_fee = 1000  # 台電 400 度夏季平均約 1,000 元/月
-        electricity_desc = "台電帳單計費 (400度約 1,000 元/月)"
+        electricity_fee = int(electricity_kwh * 2.5)  # 台電平均約 2.5 元/度
+        electricity_desc = f"台電帳單計費 ({electricity_kwh}度約 {electricity_fee:,} 元/月)"
     else:
         rate_match = re.search(r'(?:一度|1度|電費|電費一度)[：:\s]*([\d\.]+)\s*元', full_text)
         if not rate_match:
@@ -60,12 +59,12 @@ def parse_rental_costs(text: str, price_str: str) -> Dict[str, Any]:
         if rate_match:
             try:
                 rate = float(rate_match.group(1))
-                electricity_fee = int(rate * 400)
-                electricity_desc = f"一度 {rate} 元 (400度約 {electricity_fee:,} 元/月)"
+                electricity_fee = int(rate * electricity_kwh)
+                electricity_desc = f"一度 {rate} 元 ({electricity_kwh}度約 {electricity_fee:,} 元/月)"
             except ValueError:
                 pass
 
-    # 3. 解析水費 (Water Fee)
+    # 3. 解析水費
     water_fee = 100
     water_desc = "約 100 元/月"
 
@@ -87,7 +86,7 @@ def parse_rental_costs(text: str, price_str: str) -> Dict[str, Any]:
         other_fees = parse_numeric(trash_match.group(1))
         other_desc = f"垃圾/清潔費 {other_fees:,} 元/月"
 
-    # 5. 公式：預估月總成本 = 租金 + 管理費/額外費用 + 預估電費 (400度) + 水費 + 其他雜費
+    # 5. 公式：預估月總成本
     total_estimated_monthly_cost = rent + management_fee + electricity_fee + water_fee + other_fees
 
     return {
@@ -102,11 +101,7 @@ def parse_rental_costs(text: str, price_str: str) -> Dict[str, Any]:
         "other_fees": other_fees,
         "other_desc": other_desc,
         "total_estimated_cost": total_estimated_monthly_cost,
-        "total_estimated_cost_str": f"{total_estimated_monthly_cost:,} 元/月"
+        "total_estimated_cost_str": f"{total_estimated_monthly_cost:,} 元/月",
+        "mode_label": MODE_LABEL,
+        "electricity_kwh": electricity_kwh
     }
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    sample_text = "14,500 元/月 二個月 租金包含水費、網路、瓦斯費，另有額外費用800元/月 總支出試算"
-    res = parse_rental_costs(sample_text, "14,500元/月")
-    print("額外費用 800 元解析測試:", res['management_desc'], "總估算成本:", res['total_estimated_cost_str'])

@@ -27,7 +27,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OurHome 雙人同住租屋品質與成本儀表板 (雲端 24H 版)</title>
+    <title>OurHome 租屋品質與成本儀表板 (雲端 24H 版)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -206,7 +206,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="container">
         <header>
             <div class="brand">
-                <h1>👩‍❤️‍👨 OurHome 雙人同住租屋網頁儀表板</h1>
+                <h1 id="pageHeading">🏠 OurHome 租屋品質與成本儀表板</h1>
                 <p>雲端 24H 自動巡邏與動態區域過濾比價</p>
             </div>
             <button class="refresh-btn" onclick="fetchHouses()">🔄 立即刷新</button>
@@ -214,7 +214,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-label">適合雙人房源總數</div>
+                <div class="stat-label">合格房源總數</div>
                 <div class="stat-value highlight-blue" id="stat-total">0 筆</div>
             </div>
             <div class="stat-card">
@@ -222,11 +222,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="stat-value highlight-yellow" id="stat-taipower">0 筆</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">平均雙人預估月總成本</div>
+                <div class="stat-label">平均預估月總成本</div>
                 <div class="stat-value highlight-green" id="stat-avg-cost">$0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">最低雙人預估月總成本</div>
+                <div class="stat-label">最低預估月總成本</div>
                 <div class="stat-value" id="stat-min-cost">$0</div>
             </div>
         </div>
@@ -236,11 +236,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             <div class="filters-row">
                 <div class="pill-group" id="filterPills">
-                    <!-- 動態生成地區標籤 -->
+                    <!-- 精準行政區標籤將動態渲染於此 -->
                 </div>
 
                 <select id="sortSelect" class="sort-select" onchange="filterAndRender()">
-                    <option value="cost_asc">排序：預估雙人總成本 (低 ➔ 高)</option>
+                    <option value="cost_asc">排序：預估月總成本 (低 ➔ 高)</option>
                     <option value="rent_asc">排序：刊登租金 (低 ➔ 高)</option>
                     <option value="size_desc">排序：坪數 (大 ➔ 小)</option>
                     <option value="time_desc">排序：最新上架/更新時間</option>
@@ -271,13 +271,21 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         function renderDynamicDistrictPills() {
             const pillGroup = document.getElementById('filterPills');
-            const districts = new Set();
+            
+            const knownDistricts = [
+                "大安區", "中山區", "信義區", "松山區", "南港區", "內湖區", "士林區", "北投區", "萬華區", "中正區", "大同區", "文山區",
+                "板橋區", "新莊區", "中和區", "永和區", "三重區", "新店區", "土城區", "蘆洲區", "汐止區", "樹林區", "淡水區", "三峽區", "林口區", "鶯歌區", "五股區", "泰山區", "八里區",
+                "東區", "西區", "南區", "北區", "中區", "安平區", "左營區", "鼓山區", "三民區"
+            ];
+
+            const presentDistricts = new Set();
 
             allHouses.forEach(h => {
                 const addr = h.address || '';
-                const match = addr.match(/([\\u4e00-\\u9fa5]{2,3}[區市縣鄉鎮])/);
-                if (match) {
-                    districts.add(match[1]);
+                for (const d of knownDistricts) {
+                    if (addr.includes(d)) {
+                        presentDistricts.add(d);
+                    }
                 }
             });
 
@@ -288,7 +296,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="pill ${currentFilter === 'washing' ? 'active' : ''}" data-filter="washing" onclick="setFilter('washing', this)">🧺 有獨立洗衣機</div>
             `;
 
-            const districtPillsHtml = Array.from(districts).sort().map(d => `
+            const districtPillsHtml = Array.from(presentDistricts).sort().map(d => `
                 <div class="pill ${currentFilter === d ? 'active' : ''}" data-filter="${d}" onclick="setFilter('${d}', this)">📍 ${d}</div>
             `).join('');
 
@@ -299,6 +307,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const total = allHouses.length;
             const taipowerCount = allHouses.filter(h => h.cost_info && h.cost_info.is_taipower).length;
             let totalCostSum = 0, minCost = 999999;
+
+            if (allHouses.length > 0 && allHouses[0].cost_info && allHouses[0].cost_info.mode_label) {
+                document.getElementById('pageHeading').innerText = `🏠 OurHome ${allHouses[0].cost_info.mode_label}租屋儀表板`;
+            }
 
             allHouses.forEach(h => {
                 const cost = h.cost_info ? h.cost_info.total_estimated_cost : 0;
@@ -322,18 +334,24 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             filterAndRender();
         }
 
+        function cleanAddressDisplay(rawAddr) {
+            if (!rawAddr) return '未提供地址';
+            return rawAddr.replace(/^.*?(依現場|社區名稱|所屬社區|高樓層|電梯大樓)/g, '').trim() || rawAddr;
+        }
+
         function filterAndRender() {
             const searchText = document.getElementById('searchInput').value.toLowerCase().trim();
             const sortVal = document.getElementById('sortSelect').value;
 
             let filtered = allHouses.filter(h => {
-                const fullStr = `${h.title} ${h.address} ${h.price} ${h.size} ${h.house_id}`.toLowerCase();
+                const cleanAddr = cleanAddressDisplay(h.address);
+                const fullStr = `${h.title} ${cleanAddr} ${h.price} ${h.size} ${h.house_id}`.toLowerCase();
                 if (searchText && !fullStr.includes(searchText)) return false;
 
                 if (currentFilter === 'taipower') return h.cost_info && h.cost_info.is_taipower;
                 if (currentFilter === 'balcony') return h.couples_features && h.couples_features.some(f => f.includes('陽台'));
                 if (currentFilter === 'washing') return h.couples_features && h.couples_features.some(f => f.includes('洗衣機'));
-                if (currentFilter !== 'all') return fullStr.includes(currentFilter.toLowerCase());
+                if (currentFilter !== 'all') return (h.address || '').includes(currentFilter);
 
                 return true;
             });
@@ -368,20 +386,21 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const cost = h.cost_info || {};
                 const warnings = h.couples_warnings || [];
                 const features = h.couples_features || [];
+                const cleanAddr = cleanAddressDisplay(h.address);
 
                 return `
                     <div class="house-card">
                         <div class="card-header">
-                            ${cost.is_taipower ? '<div class="badge-taipower">✨ 雙人省錢神房 (台電計費)</div>' : '<div class="badge-normal">👩‍❤️‍👨 特選雙人同住物件</div>'}
+                            ${cost.is_taipower ? '<div class="badge-taipower">✨ 台電省錢神房 (台電計費)</div>' : '<div class="badge-normal">🏠 特選優質物件</div>'}
                             <a href="${h.link}" target="_blank" class="house-title">${h.title}</a>
                         </div>
                         <div class="meta-pills">
-                            <span class="meta-tag">📍 ${h.address || '未提供地址'}</span>
+                            <span class="meta-tag">📍 ${cleanAddr}</span>
                             <span class="meta-tag">📐 ${h.size || '未提供坪數'}</span>
                             <span class="meta-tag">🆔 ${h.house_id}</span>
                         </div>
                         <div class="cost-block">
-                            <div class="cost-title">預估雙人真實月總成本 (400度用電)</div>
+                            <div class="cost-title">預估真實月總成本 (${cost.electricity_kwh || 400}度用電)</div>
                             <div class="cost-amount">${cost.total_estimated_cost_str || h.price}</div>
                             <div class="cost-details">
                                 <div>💰 租金: ${h.price}</div>
@@ -447,7 +466,6 @@ def background_crawler_loop():
         logger.info(f"巡邏結束，等待 {sleep_seconds} 秒後進行下一次巡邏...")
         time.sleep(sleep_seconds)
 
-# 啟動背景巡邏線程 (Daemon)
 crawler_thread = threading.Thread(target=background_crawler_loop, daemon=True)
 crawler_thread.start()
 
