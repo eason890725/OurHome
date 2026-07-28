@@ -161,12 +161,15 @@ class RentalScraper:
                         "div.item-info-title a, a.item-title",
                         """elements => elements.map(el => {
                             let container = el.closest('section, div.item, div.list-item, div.rent-item, div.item-info') || el.parentElement.parentElement;
+                            let priceEl = container ? container.querySelector('div.item-info-price, .item-info-price-price, strong, .price') : null;
+                            let priceText = priceEl ? priceEl.innerText.trim() : '';
                             let text = container ? container.innerText : el.innerText;
                             
                             return {
                                 full_text: text,
                                 title: el.innerText.trim(),
-                                link: el.href
+                                link: el.href,
+                                priceText: priceText
                             };
                         })"""
                     )
@@ -176,6 +179,7 @@ class RentalScraper:
                         full_text = item.get("full_text", "")
                         link = item.get("link", "")
                         title = item.get("title", "")
+                        price_text = item.get("priceText", "")
 
                         id_match = re.search(r'/\w*?(\d{7,8})', link)
                         if not id_match:
@@ -214,16 +218,33 @@ class RentalScraper:
                         exact_addr, details_text = self.fetch_detail_info(page, house_id, raw_address)
                         combined_text = f"{full_text} {details_text}"
 
-                        price_match = re.search(r'([\d,]+)\s*元', full_text)
-                        price_str = f"{price_match.group(1)}元/月" if price_match else "未標示租金"
+                        # --- 精準租金解析（排除「降500元」或「降1200元」之降價標籤干擾）---
+                        real_price = 0
+                        dom_p_match = re.search(r'([\d,]+)\s*元', price_text)
+                        if dom_p_match:
+                            parsed_dom_p = parse_numeric_price(dom_p_match.group(1))
+                            if parsed_dom_p >= 5000:
+                                real_price = parsed_dom_p
 
+                        if real_price == 0:
+                            clean_text = re.sub(r'(?:今日|已)?降[\d,]+元|下降[\d,]+元', '', combined_text)
+                            all_prices = re.findall(r'([\d,]+)\s*元', clean_text)
+                            valid_prices = [parse_numeric_price(p) for p in all_prices if parse_numeric_price(p) >= 5000]
+                            if valid_prices:
+                                real_price = valid_prices[0]
+
+                        if real_price == 0:
+                            logger.info(f"🚫 無法解析有效刊登租金 (＜ 5,000 元)，自動過濾標籤干擾頁面: [{house_id}] {title[:20]}")
+                            continue
+
+                        price_str = f"{real_price:,}元/月"
                         size_str = f"{size_match.group(1)}坪" if size_match else "未標示坪數"
 
                         clean_item = {
                             "house_id": house_id,
                             "title": title.split("\n")[0].strip(),
                             "price": price_str,
-                            "numeric_price": parse_numeric_price(price_str),
+                            "numeric_price": real_price,
                             "address": exact_addr,
                             "size": size_str,
                             "link": f"https://rent.591.com.tw/{house_id}",
