@@ -26,21 +26,30 @@ def parse_rental_costs(text: str, price_str: str, electricity_kwh: int = DEFAULT
     
     extra_match = re.search(r'(?:另有)?額外費用[：:\s]*([\d,]+)\s*元', full_text)
     if extra_match:
-        management_fee = parse_numeric(extra_match.group(1))
-        management_desc = f"額外費用/管理費 {management_fee:,} 元/月"
-    elif re.search(r'(含管|包管|內含管理費|含管理費|免管理費|無管理費|不收管理費)', full_text):
-        management_fee = 0
-        management_desc = "內含 (0 元)"
-    else:
-        mgmt_match = re.search(r'管理費[：:\s]*([\d,]+)\s*元', full_text)
-        if not mgmt_match:
-            mgmt_match = re.search(r'([\d,]+)\s*元\s*/?\s*月?\s*管理費', full_text)
-        
-        if mgmt_match:
-            management_fee = parse_numeric(mgmt_match.group(1))
-            management_desc = f"{management_fee:,} 元/月"
+        fee_val = parse_numeric(extra_match.group(1))
+        # 防呆：避免額外費用被誤抓為租金金額 (限制在 10,000 元以內)
+        if 0 < fee_val <= 10000:
+            management_fee = fee_val
+            management_desc = f"額外費用/管理費 {management_fee:,} 元/月"
+
+    if management_fee == 0:
+        if re.search(r'(含管|包管|內含管理費|含管理費|免管理費|無管理費|不收管理費)', full_text):
+            management_fee = 0
+            management_desc = "內含 (0 元)"
         else:
-            management_desc = "內含 / 未標示"
+            mgmt_match = re.search(r'管理費[：:\s]*([\d,]+)\s*元', full_text)
+            if not mgmt_match:
+                mgmt_match = re.search(r'([\d,]+)\s*元\s*/?\s*月?\s*管理費', full_text)
+            
+            if mgmt_match:
+                fee_val = parse_numeric(mgmt_match.group(1))
+                if 0 < fee_val <= 10000:
+                    management_fee = fee_val
+                    management_desc = f"{management_fee:,} 元/月"
+                else:
+                    management_desc = "內含 / 未標示"
+            else:
+                management_desc = "內含 / 未標示"
 
     # 2. 解析電費 (單人預設 200度，雙人預設 400度)
     is_taipower = False
@@ -59,8 +68,10 @@ def parse_rental_costs(text: str, price_str: str, electricity_kwh: int = DEFAULT
         if rate_match:
             try:
                 rate = float(rate_match.group(1))
-                electricity_fee = int(rate * electricity_kwh)
-                electricity_desc = f"一度 {rate} 元 ({electricity_kwh}度約 {electricity_fee:,} 元/月)"
+                # 防呆：限制電費單價在合理範圍 (一度 2 ~ 10 元)
+                if 2.0 <= rate <= 10.0:
+                    electricity_fee = int(rate * electricity_kwh)
+                    electricity_desc = f"一度 {rate} 元 ({electricity_kwh}度約 {electricity_fee:,} 元/月)"
             except ValueError:
                 pass
 
@@ -74,17 +85,21 @@ def parse_rental_costs(text: str, price_str: str, electricity_kwh: int = DEFAULT
     else:
         water_match = re.search(r'水費[：:\s]*([\d,]+)\s*元', full_text)
         if water_match:
-            water_fee = parse_numeric(water_match.group(1))
-            water_desc = f"{water_fee:,} 元/月"
+            w_val = parse_numeric(water_match.group(1))
+            if 0 < w_val <= 2000:
+                water_fee = w_val
+                water_desc = f"{water_fee:,} 元/月"
 
-    # 4. 解析其他雜費
+    # 4. 解析其他雜費 (如垃圾清潔費，防呆限制 <= 2000 元，避免誤抓租金或押金)
     other_fees = 0
     other_desc = "無特別雜費"
 
     trash_match = re.search(r'(?:垃圾|清潔費|代收費)[：:\s]*([\d,]+)\s*元', full_text)
     if trash_match and "免" not in trash_match.group(0) and "含" not in trash_match.group(0):
-        other_fees = parse_numeric(trash_match.group(1))
-        other_desc = f"垃圾/清潔費 {other_fees:,} 元/月"
+        fee_val = parse_numeric(trash_match.group(1))
+        if 0 < fee_val <= 2000:
+            other_fees = fee_val
+            other_desc = f"垃圾/清潔費 {other_fees:,} 元/月"
 
     # 5. 公式：預估月總成本
     total_estimated_monthly_cost = rent + management_fee + electricity_fee + water_fee + other_fees
@@ -105,3 +120,6 @@ def parse_rental_costs(text: str, price_str: str, electricity_kwh: int = DEFAULT
         "mode_label": MODE_LABEL,
         "electricity_kwh": electricity_kwh
     }
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
