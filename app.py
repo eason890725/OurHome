@@ -660,6 +660,8 @@ def keep_render_alive():
 
 def background_crawler_loop():
     logger.info("啟動 24H 雲端自動巡邏背景線程...")
+    # 啟動時先延遲 15 秒，讓 Gunicorn Web 伺服器先完成熱身並快速回應使用者的網頁存取
+    time.sleep(15)
     while True:
         try:
             logger.info("=== 開始執行 24H 雲端巡邏與推播任務 ===")
