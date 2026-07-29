@@ -7,7 +7,7 @@ import random
 import logging
 import threading
 import requests
-from flask import Flask, jsonify, render_template_string
+from flask import Flask, jsonify, render_template_string, request
 
 from db import HousingDB
 from cost_calculator import parse_rental_costs
@@ -75,17 +75,26 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         .brand p { color: var(--text-sub); font-size: 14px; margin-top: 4px; }
 
+        .header-actions { display: flex; gap: 10px; align-items: center; }
+
         .refresh-btn {
             background: linear-gradient(135deg, #0284c7, #2563eb);
-            color: white; border: none; padding: 10px 18px; border-radius: 8px;
+            color: white; border: none; padding: 10px 16px; border-radius: 8px;
             font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); display: flex; align-items: center; gap: 8px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); display: flex; align-items: center; gap: 6px;
         }
 
         .refresh-btn:hover { opacity: 0.9; transform: translateY(-1px); }
 
+        .backup-btn {
+            background: rgba(255, 255, 255, 0.08); border: 1px solid var(--card-border);
+            color: var(--text-main); padding: 10px 14px; border-radius: 8px;
+            font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s;
+        }
+        .backup-btn:hover { background: rgba(255, 255, 255, 0.15); }
+
         .stats-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 16px; margin-bottom: 24px;
         }
 
@@ -99,6 +108,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .stat-value.highlight-green { color: var(--accent-green); }
         .stat-value.highlight-yellow { color: var(--accent-yellow); }
         .stat-value.highlight-blue { color: var(--accent-blue); }
+        .stat-value.highlight-red { color: #f43f5e; }
 
         .controls-card {
             background: var(--card-bg); backdrop-filter: blur(12px);
@@ -124,6 +134,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         .pill:hover { background: rgba(255, 255, 255, 0.12); color: var(--text-main); }
         .pill.active { background: #0284c7; color: white; border-color: #38bdf8; font-weight: 600; }
+        .pill.pill-like.active { background: #e11d48; color: white; border-color: #fb7185; }
+        .pill.pill-neutral.active { background: #d97706; color: white; border-color: #fbbf24; }
+        .pill.pill-dislike.active { background: #475569; color: white; border-color: #94a3b8; }
 
         .sort-select {
             background: rgba(15, 23, 42, 0.6); border: 1px solid var(--card-border);
@@ -139,12 +152,36 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             border: 1px solid var(--card-border); border-radius: 14px; padding: 20px;
             display: flex; flex-direction: column; justify-content: space-between;
             transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+            position: relative;
         }
+
+        .house-card.rated-like { border-color: rgba(244, 63, 94, 0.5); background: rgba(30, 41, 59, 0.85); }
+        .house-card.rated-dislike { opacity: 0.5; filter: grayscale(0.5); }
 
         .house-card:hover {
             transform: translateY(-3px); border-color: rgba(56, 189, 248, 0.4);
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
         }
+
+        /* 評價按鈕組 */
+        .rating-toolbar {
+            display: flex; gap: 6px; margin-top: 14px; padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08); align-items: center; justify-content: space-between;
+        }
+
+        .rating-btn-group { display: flex; gap: 6px; }
+
+        .rating-btn {
+            background: rgba(255, 255, 255, 0.06); border: 1px solid var(--card-border);
+            color: var(--text-sub); padding: 6px 12px; border-radius: 8px; font-size: 12px;
+            font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px;
+        }
+
+        .rating-btn:hover { background: rgba(255, 255, 255, 0.15); color: var(--text-main); }
+        
+        .rating-btn.active-like { background: #e11d48; color: white; border-color: #fb7185; box-shadow: 0 2px 8px rgba(225, 29, 72, 0.4); }
+        .rating-btn.active-neutral { background: #d97706; color: white; border-color: #fbbf24; box-shadow: 0 2px 8px rgba(217, 119, 6, 0.4); }
+        .rating-btn.active-dislike { background: #475569; color: white; border-color: #94a3b8; }
 
         .badge-taipower {
             display: inline-block; background: rgba(245, 158, 11, 0.15); color: #fbbf24;
@@ -194,9 +231,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         .btn-link {
-            display: block; width: 100%; text-align: center; background: rgba(255, 255, 255, 0.08);
-            border: 1px solid var(--card-border); color: var(--text-main); padding: 10px;
-            border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; margin-top: 14px; transition: all 0.2s;
+            display: inline-block; text-align: center; background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--card-border); color: var(--text-main); padding: 7px 12px;
+            border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none; transition: all 0.2s;
         }
 
         .btn-link:hover { background: #0284c7; border-color: #38bdf8; color: white; }
@@ -208,9 +245,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <header>
             <div class="brand">
                 <h1 id="pageHeading">🏠 OurHome 租屋品質與成本儀表板</h1>
-                <p>雲端 24H 自動巡邏與同義字智慧模糊搜尋</p>
+                <p>雲端 24H 自動巡邏與物件喜好分類評分標記</p>
             </div>
-            <button class="refresh-btn" onclick="fetchHouses()">🔄 列車刷新</button>
+            <div class="header-actions">
+                <button class="backup-btn" onclick="exportBackup()">📥 匯出紀錄備份</button>
+                <button class="refresh-btn" onclick="fetchHouses()">🔄 列車刷新</button>
+            </div>
         </header>
 
         <div class="stats-grid">
@@ -219,7 +259,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="stat-value highlight-blue" id="stat-total">0 筆</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">✨ 台電計費省錢神房</div>
+                <div class="stat-label">❤️ 喜愛精選物件</div>
+                <div class="stat-value highlight-red" id="stat-like">0 筆</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">✨ 台電計費神房</div>
                 <div class="stat-value highlight-yellow" id="stat-taipower">0 筆</div>
             </div>
             <div class="stat-card">
@@ -237,7 +281,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             <div class="filters-row">
                 <div class="pill-group" id="filterPills">
-                    <!-- 動態行政區標籤渲染區 -->
+                    <!-- 動態行政區與評價標籤渲染區 -->
                 </div>
 
                 <select id="sortSelect" class="sort-select" onchange="filterAndRender()">
@@ -277,6 +321,36 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
         }
 
+        async function setHouseRating(houseId, newRating) {
+            const target = allHouses.find(h => String(h.house_id) === String(houseId));
+            if (target) {
+                const finalRating = (target.user_rating === newRating) ? 'none' : newRating;
+                target.user_rating = finalRating;
+                updateStats();
+                filterAndRender();
+
+                try {
+                    await fetch('/api/rating', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ house_id: houseId, rating: finalRating })
+                    });
+                } catch (err) {
+                    console.error("儲存評價失敗:", err);
+                }
+            }
+        }
+
+        function exportBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allHouses, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `OurHome_Rentals_Backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
         function renderDynamicDistrictPills() {
             const pillGroup = document.getElementById('filterPills');
             const knownDistricts = [
@@ -286,22 +360,24 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             ];
 
             const presentDistricts = new Set();
-
             allHouses.forEach(h => {
                 const addr = h.address || '';
                 for (const d of knownDistricts) {
-                    if (addr.includes(d)) {
-                        presentDistricts.add(d);
-                    }
+                    if (addr.includes(d)) presentDistricts.add(d);
                 }
             });
 
+            const countRating = (r) => allHouses.filter(h => h.user_rating === r).length;
+
             const fixedPillsHtml = `
                 <div class="pill ${currentFilter === 'all' ? 'active' : ''}" data-filter="all" onclick="setFilter('all', this)">全部房源</div>
-                <div class="pill ${currentFilter === 'subsidy' ? 'active' : ''}" data-filter="subsidy" onclick="setFilter('subsidy', this)">📜 可租補 / 租屋補助</div>
+                <div class="pill pill-like ${currentFilter === 'like' ? 'active' : ''}" data-filter="like" onclick="setFilter('like', this)">❤️ 喜歡的房源 (${countRating('like')})</div>
+                <div class="pill pill-neutral ${currentFilter === 'neutral' ? 'active' : ''}" data-filter="neutral" onclick="setFilter('neutral', this)">😐 普通紀錄 (${countRating('neutral')})</div>
+                <div class="pill pill-dislike ${currentFilter === 'dislike' ? 'active' : ''}" data-filter="dislike" onclick="setFilter('dislike', this)">💔 不喜歡/已淘汰 (${countRating('dislike')})</div>
+                <div class="pill ${currentFilter === 'subsidy' ? 'active' : ''}" data-filter="subsidy" onclick="setFilter('subsidy', this)">📜 可租補</div>
                 <div class="pill ${currentFilter === 'taipower' ? 'active' : ''}" data-filter="taipower" onclick="setFilter('taipower', this)">✨ 台電神房</div>
                 <div class="pill ${currentFilter === 'balcony' ? 'active' : ''}" data-filter="balcony" onclick="setFilter('balcony', this)">🧺 有獨立陽台</div>
-                <div class="pill ${currentFilter === 'washing' ? 'active' : ''}" data-filter="washing" onclick="setFilter('washing', this)">🧺 有獨立洗衣機</div>
+                <div class="pill ${currentFilter === 'washing' ? 'active' : ''}" data-filter="washing" onclick="setFilter('washing', this)">🧺 獨立洗衣機</div>
             `;
 
             const districtPillsHtml = Array.from(presentDistricts).sort().map(d => `
@@ -313,6 +389,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         function updateStats() {
             const total = allHouses.length;
+            const likeCount = allHouses.filter(h => h.user_rating === 'like').length;
             const taipowerCount = allHouses.filter(h => h.cost_info && h.cost_info.is_taipower).length;
             let totalCostSum = 0, minCost = 999999;
 
@@ -330,6 +407,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             const avgCost = total > 0 ? Math.round(totalCostSum / total) : 0;
             document.getElementById('stat-total').innerText = `${total} 筆`;
+            document.getElementById('stat-like').innerText = `${likeCount} 筆`;
             document.getElementById('stat-taipower').innerText = `${taipowerCount} 筆`;
             document.getElementById('stat-avg-cost').innerText = `$${avgCost.toLocaleString()} /月`;
             document.getElementById('stat-min-cost').innerText = minCost < 999999 ? `$${minCost.toLocaleString()} /月` : '$0';
@@ -364,7 +442,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         function getExpandedSearchTerms(input) {
             if (!input) return [];
             let terms = [input];
-            
             for (const group of SYNONYM_GROUPS) {
                 if (group.some(kw => input.includes(kw) || kw.includes(input))) {
                     terms.push(...group);
@@ -387,6 +464,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     if (!matchesAnyTerm) return false;
                 }
 
+                if (currentFilter === 'like') return h.user_rating === 'like';
+                if (currentFilter === 'neutral') return h.user_rating === 'neutral';
+                if (currentFilter === 'dislike') return h.user_rating === 'dislike';
                 if (currentFilter === 'subsidy') return isSubsidyHouse(fullText);
                 if (currentFilter === 'taipower') return h.cost_info && h.cost_info.is_taipower;
                 if (currentFilter === 'balcony') return SYNONYM_GROUPS[1].some(kw => fullText.includes(kw));
@@ -429,9 +509,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const cleanAddr = cleanAddressDisplay(h.address);
                 const fullText = `${h.title} ${cleanAddr} ${h.details_text || ''}`;
                 const hasSubsidy = isSubsidyHouse(fullText);
+                const rating = h.user_rating || 'none';
 
                 return `
-                    <div class="house-card">
+                    <div class="house-card rated-${rating}">
                         <div class="card-header">
                             ${hasSubsidy ? '<div class="badge-taipower" style="background:rgba(16, 185, 129, 0.15); color:#34d399; border-color:rgba(16, 185, 129, 0.3);">📜 可申請租屋補助</div>' : ''}
                             ${cost.is_taipower ? '<div class="badge-taipower">✨ 台電省錢神房 (台電計費)</div>' : (!hasSubsidy ? '<div class="badge-normal">🏠 特選優質物件</div>' : '')}
@@ -458,7 +539,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                                 ${features.map(f => `<span class="tag-feature">${f}</span>`).join('')}
                             </div>
                         </div>
-                        <a href="${h.link}" target="_blank" class="btn-link">🔗 一鍵直達 591 房屋頁面 ➔</a>
+                        
+                        <!-- 物件喜好評分列與鏈結 -->
+                        <div class="rating-toolbar">
+                            <div class="rating-btn-group">
+                                <button class="rating-btn ${rating === 'like' ? 'active-like' : ''}" onclick="setHouseRating('${h.house_id}', 'like')">❤️ 喜歡</button>
+                                <button class="rating-btn ${rating === 'neutral' ? 'active-neutral' : ''}" onclick="setHouseRating('${h.house_id}', 'neutral')">😐 普通</button>
+                                <button class="rating-btn ${rating === 'dislike' ? 'active-dislike' : ''}" onclick="setHouseRating('${h.house_id}', 'dislike')">💔 不喜歡</button>
+                            </div>
+                            <a href="${h.link}" target="_blank" class="btn-link">🔗 591 頁面 ➔</a>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -484,6 +574,17 @@ def api_houses():
         h["couples_warnings"] = scraper.detect_couples_warnings(full_text)
         h["couples_features"] = scraper.detect_couples_features(full_text)
     return jsonify(houses)
+
+@app.route("/api/rating", methods=["POST"])
+def api_rating():
+    try:
+        data = request.get_json(force=True)
+        house_id = str(data.get("house_id", ""))
+        rating = str(data.get("rating", "none"))
+        success = db.update_house_rating(house_id, rating)
+        return jsonify({"success": success, "house_id": house_id, "rating": rating})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 def keep_render_alive():
     """發送 HTTP Ping 防止 Render 免費伺服器因 15 分鐘無人存取而休眠 (24H 防休眠保活)"""
@@ -516,13 +617,12 @@ def background_crawler_loop():
         except Exception as e:
             logger.error(f"雲端巡邏任務異常: {e}")
 
-        # 巡邏間隔中，每 5 分鐘進行一次自我 Ping 保活，確保 Render 永遠保持 24H 喚醒狀態！
         sleep_seconds = CHECK_INTERVAL_MINUTES * 60 + random.randint(-30, 30)
         logger.info(f"巡邏結束，等待 {sleep_seconds} 秒後進行下一次巡邏...")
         
         elapsed = 0
         while elapsed < sleep_seconds:
-            time.sleep(300) # 每 5 分鐘 ping 一次
+            time.sleep(300)
             elapsed += 300
             keep_render_alive()
 

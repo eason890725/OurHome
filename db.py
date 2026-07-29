@@ -59,6 +59,7 @@ class HousingDB:
                     address_fingerprint TEXT,
                     price_history TEXT,
                     details_text TEXT,
+                    user_rating TEXT DEFAULT 'none',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -74,10 +75,29 @@ class HousingDB:
                 cursor.execute("ALTER TABLE houses ADD COLUMN numeric_price INTEGER")
             if "details_text" not in columns:
                 cursor.execute("ALTER TABLE houses ADD COLUMN details_text TEXT")
+            if "user_rating" not in columns:
+                cursor.execute("ALTER TABLE houses ADD COLUMN user_rating TEXT DEFAULT 'none'")
             if "updated_at" not in columns:
                 cursor.execute("ALTER TABLE houses ADD COLUMN updated_at TIMESTAMP")
                 
             conn.commit()
+
+    def update_house_rating(self, house_id: str, rating: str) -> bool:
+        """更新房屋的使用者評價標記 (like / neutral / dislike / none)"""
+        valid_ratings = {"like", "neutral", "dislike", "none"}
+        if rating not in valid_ratings:
+            rating = "none"
+        
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE houses 
+                SET user_rating = ?, updated_at = ?
+                WHERE house_id = ?
+            """, (rating, now_str, str(house_id)))
+            conn.commit()
+            return cursor.rowcount > 0
 
     def is_precise_duplicate(self, new_house: dict, old_house: dict) -> bool:
         t1, t2 = new_house.get("title", ""), old_house.get("title", "")
@@ -147,7 +167,7 @@ class HousingDB:
 
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT house_id, price, numeric_price, price_history FROM houses WHERE house_id = ?", (house_id,))
+            cursor.execute("SELECT house_id, price, numeric_price, price_history, user_rating FROM houses WHERE house_id = ?", (house_id,))
             row = cursor.fetchone()
 
             if not row:
@@ -159,8 +179,8 @@ class HousingDB:
                 ], ensure_ascii=False)
 
                 cursor.execute("""
-                    INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, user_rating, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     house_id,
                     title,
@@ -172,6 +192,7 @@ class HousingDB:
                     fingerprint,
                     initial_history,
                     details_text,
+                    'none',
                     now_str,
                     now_str
                 ))
