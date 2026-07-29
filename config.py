@@ -20,21 +20,23 @@ else:
 # 2. Discord Webhook
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "")
 
-# 3. 多網址目標 (支援 TARGET_URL_1, TARGET_URL_2, TARGET_URL_3...)
+# 3. 多網址目標解析 (支援在 Render 環境變數中設定 TARGET_URL_1, TARGET_URL_2... 或在 TARGET_URL 用逗號/換行隔開多條網址)
 TARGET_URLS = []
-i = 1
-while True:
-    url_key = f"TARGET_URL_{i}"
-    url_val = os.getenv(url_key)
-    if not url_val and i == 1:
-        url_val = os.getenv("TARGET_URL")
-    
-    if url_val:
-        TARGET_URLS.append(url_val.strip())
-        i += 1
-    else:
-        break
 
+# 檢查單一 TARGET_URL 變數 (支援逗號或分號或換行分隔多條網址)
+single_target_env = os.getenv("TARGET_URL", "")
+if single_target_env:
+    for u in single_target_env.replace("\n", ",").replace(";", ",").split(","):
+        if u.strip() and u.strip() not in TARGET_URLS:
+            TARGET_URLS.append(u.strip())
+
+# 檢查編號 TARGET_URL_1, TARGET_URL_2 ... TARGET_URL_50
+for i in range(1, 51):
+    url_val = os.getenv(f"TARGET_URL_{i}")
+    if url_val and url_val.strip() and url_val.strip() not in TARGET_URLS:
+        TARGET_URLS.append(url_val.strip())
+
+# 若完全未設定，使用預設安全搜尋網址
 if not TARGET_URLS:
     TARGET_URLS = [
         "https://rent.591.com.tw/list?region=1&section=1,4,5,7,11&kind=2&shape=2&notice=all_sex&rentprice=10000_20000,20000_30000"
