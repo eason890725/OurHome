@@ -157,7 +157,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
         }
 
-        /* 評價按鈕組 */
         .rating-toolbar {
             display: flex; gap: 6px; margin-top: 14px; padding-top: 12px;
             border-top: 1px solid rgba(255, 255, 255, 0.08); align-items: center; justify-content: space-between;
@@ -239,7 +238,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <header>
             <div class="brand">
                 <h1 id="pageHeading">🏠 OurHome 租屋品質與成本儀表板</h1>
-                <p>即時自動巡邏與物件喜好分類評分標記</p>
+                <p>雲端 24H 免費零成本評分記憶連動系統</p>
             </div>
             <div class="header-actions">
                 <button class="backup-btn" onclick="exportBackup()">📥 匯出紀錄備份</button>
@@ -303,10 +302,46 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             ["台電", "依台電", "台電計費", "台灣電力"]
         ];
 
+        // 讀取與寫入 LocalStorage 防止 Render 免費伺服器重置評分
+        function getLocalRatings() {
+            try { return JSON.parse(localStorage.getItem('ourhome_ratings') || '{}'); } catch { return {}; }
+        }
+        function saveLocalRating(houseId, rating) {
+            const ratings = getLocalRatings();
+            if (rating === 'none') delete ratings[houseId];
+            else ratings[houseId] = rating;
+            localStorage.setItem('ourhome_ratings', JSON.stringify(ratings));
+        }
+
+        async function syncLocalRatingsToServer() {
+            const localRatings = getLocalRatings();
+            if (Object.keys(localRatings).length > 0) {
+                try {
+                    await fetch('/api/sync_ratings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ratings: localRatings })
+                    });
+                } catch (e) { console.debug("離線自動同步提示:", e); }
+            }
+        }
+
         async function fetchHouses() {
             try {
+                // 開頁面時自動先將本機記憶的喜好同步給伺服器，達成完全免費 0 元永久防丟失！
+                await syncLocalRatingsToServer();
+
                 const res = await fetch('/api/houses');
                 allHouses = await res.json();
+                
+                // 將 localRatings 融合至全域列表中
+                const localRatings = getLocalRatings();
+                allHouses.forEach(h => {
+                    if (localRatings[h.house_id]) {
+                        h.user_rating = localRatings[h.house_id];
+                    }
+                });
+
                 renderDynamicDistrictPills();
                 updateStats();
                 filterAndRender();
@@ -318,9 +353,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         async function setHouseRating(houseId, newRating) {
             const target = allHouses.find(h => String(h.house_id) === String(houseId));
             if (target) {
-                // 如果再按一次相同評價，則取消評價 (重設為 none)
                 const finalRating = (target.user_rating === newRating) ? 'none' : newRating;
                 target.user_rating = finalRating;
+                saveLocalRating(houseId, finalRating);
                 updateStats();
                 filterAndRender();
 
@@ -337,7 +372,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         function exportBackup() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allHouses, null, 2));
+            const backupData = {
+                ratings: getLocalRatings(),
+                export_time: new Date().toISOString(),
+                houses: allHouses
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
             downloadAnchor.setAttribute("download", `OurHome_Rentals_Backup_${new Date().toISOString().slice(0,10)}.json`);
@@ -535,7 +575,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                             </div>
                         </div>
                         
-                        <!-- 物件喜好評分列與鏈結 -->
                         <div class="rating-toolbar">
                             <div class="rating-btn-group">
                                 <button class="rating-btn ${rating === 'like' ? 'active-like' : ''}" onclick="setHouseRating('${h.house_id}', 'like')">❤️ 喜歡</button>
@@ -597,6 +636,25 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": success, "house_id": house_id, "rating": rating}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+        elif self.path == "/api/sync_ratings":
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                ratings = data.get("ratings", {})
+                synced_count = 0
+                for hid, r in ratings.items():
+                    if db.update_house_rating(str(hid), str(r)):
+                        synced_count += 1
+
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "synced_count": synced_count}).encode('utf-8'))
             except Exception as e:
                 self.send_response(400)
                 self.end_headers()
