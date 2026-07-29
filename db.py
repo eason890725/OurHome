@@ -1,5 +1,6 @@
 import json
 import re
+import os
 import sqlite3
 import logging
 from datetime import datetime
@@ -81,6 +82,70 @@ class HousingDB:
                 cursor.execute("ALTER TABLE houses ADD COLUMN updated_at TIMESTAMP")
                 
             conn.commit()
+            
+        # 自動從 GitHub repo 備份檔 rentals_backup.json 無感還原所有歷史物件
+        self.restore_from_backup_json()
+
+    def sync_backup_json(self):
+        """將 SQLite 中的所有資料同步匯出至 rentals_backup.json 以保存在 GitHub 中"""
+        houses = self.get_all_houses()
+        if not houses:
+            return
+        try:
+            with open("rentals_backup.json", "w", encoding="utf-8") as f:
+                json.dump(houses, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.debug(f"同步 rentals_backup.json 失敗: {e}")
+
+    def restore_from_backup_json(self):
+        """當資料庫為空時（如 Render 重設硬碟），自動從 repo 中的 rentals_backup.json 快速還原所有歷史資料與評價"""
+        if not os.path.exists("rentals_backup.json"):
+            return
+        try:
+            with open("rentals_backup.json", "r", encoding="utf-8") as f:
+                houses = json.load(f)
+            if not houses:
+                return
+            
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                restored_count = 0
+                for h in houses:
+                    house_id = str(h.get("house_id", ""))
+                    if not house_id:
+                        continue
+                    cursor.execute("SELECT house_id FROM houses WHERE house_id = ?", (house_id,))
+                    if not cursor.fetchone():
+                        history_val = h.get("price_history", "[]")
+                        if isinstance(history_val, (list, dict)):
+                            history_str = json.dumps(history_val, ensure_ascii=False)
+                        else:
+                            history_str = str(history_val)
+
+                        cursor.execute("""
+                            INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, user_rating, created_at, updated_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            house_id,
+                            h.get("title", ""),
+                            h.get("price", ""),
+                            h.get("numeric_price", 0),
+                            h.get("address", ""),
+                            h.get("size", ""),
+                            h.get("link", ""),
+                            h.get("address_fingerprint", ""),
+                            history_str,
+                            h.get("details_text", ""),
+                            h.get("user_rating", "none"),
+                            h.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+                            h.get("updated_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                        ))
+                        restored_count += 1
+                conn.commit()
+                if restored_count > 0:
+                    logger.info(f"✨ 成功從 GitHub rentals_backup.json 自動還原 {restored_count} 筆歷史房屋與評價紀錄！")
+        except Exception as e:
+            logger.error(f"從 rentals_backup.json 還原失敗: {e}")
 
     def update_house_rating(self, house_id: str, rating: str) -> bool:
         """更新房屋的使用者評價標記 (like / neutral / dislike / none)"""
@@ -97,7 +162,10 @@ class HousingDB:
                 WHERE house_id = ?
             """, (rating, now_str, str(house_id)))
             conn.commit()
-            return cursor.rowcount > 0
+            success = cursor.rowcount > 0
+            if success:
+                self.sync_backup_json()
+            return success
 
     def is_precise_duplicate(self, new_house: dict, old_house: dict) -> bool:
         t1, t2 = new_house.get("title", ""), old_house.get("title", "")
@@ -254,6 +322,9 @@ class HousingDB:
                 results["new_houses"].append(res["house"])
             elif res["action"] == "PRICE_DROP":
                 results["price_drop_houses"].append(res["house"])
+        
+        # 批次處理後自動同步備份檔 rentals_backup.json
+        self.sync_backup_json()
         return results
 
     def get_all_houses(self) -> List[Dict[str, Any]]:
