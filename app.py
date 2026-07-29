@@ -23,6 +23,26 @@ db = HousingDB(DB_PATH)
 notifier = DiscordNotifier(DISCORD_WEBHOOK_URL)
 scraper = RentalScraper()
 
+_HOUSES_CACHE = []
+_CACHE_LAST_UPDATE = 0
+
+def get_formatted_houses_cached():
+    global _HOUSES_CACHE, _CACHE_LAST_UPDATE
+    now = time.time()
+    if _HOUSES_CACHE and (now - _CACHE_LAST_UPDATE < 5):
+        return _HOUSES_CACHE
+    
+    houses = db.get_all_houses()
+    for h in houses:
+        full_text = f"{h.get('title', '')} {h.get('address', '')} {h.get('details_text', '')}"
+        h["cost_info"] = parse_rental_costs(full_text, h.get("price", "0"))
+        h["couples_warnings"] = scraper.detect_couples_warnings(full_text)
+        h["couples_features"] = scraper.detect_couples_features(full_text)
+    
+    _HOUSES_CACHE = houses
+    _CACHE_LAST_UPDATE = now
+    return _HOUSES_CACHE
+
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -308,7 +328,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             ["台電", "依台電", "台電計費", "台灣電力"]
         ];
 
-        // 讀取與寫入 LocalStorage 防止 Render 免費伺服器重置評分
         function getLocalRatings() {
             try { return JSON.parse(localStorage.getItem('ourhome_ratings') || '{}'); } catch { return {}; }
         }
@@ -319,28 +338,24 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             localStorage.setItem('ourhome_ratings', JSON.stringify(ratings));
         }
 
-        async function syncLocalRatingsToServer() {
+        function syncLocalRatingsToServer() {
             const localRatings = getLocalRatings();
             if (Object.keys(localRatings).length > 0) {
-                try {
-                    await fetch('/api/sync_ratings', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ ratings: localRatings })
-                    });
-                } catch (e) { console.debug("離線自動同步提示:", e); }
+                fetch('/api/sync_ratings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ratings: localRatings })
+                }).catch(e => {});
             }
         }
 
         async function fetchHouses() {
             try {
-                // 開頁面時自動先將本機記憶的喜好同步給伺服器，達成完全免費 0 元永久防丟失！
-                await syncLocalRatingsToServer();
+                syncLocalRatingsToServer();
 
                 const res = await fetch('/api/houses');
                 allHouses = await res.json();
                 
-                // 將 localRatings 融合至全域列表中
                 const localRatings = getLocalRatings();
                 allHouses.forEach(h => {
                     if (localRatings[h.house_id]) {
@@ -607,12 +622,7 @@ def index():
 
 @app.route("/api/houses")
 def api_houses():
-    houses = db.get_all_houses()
-    for h in houses:
-        full_text = f"{h.get('title', '')} {h.get('address', '')} {h.get('details_text', '')}"
-        h["cost_info"] = parse_rental_costs(full_text, h.get("price", "0"))
-        h["couples_warnings"] = scraper.detect_couples_warnings(full_text)
-        h["couples_features"] = scraper.detect_couples_features(full_text)
+    houses = get_formatted_houses_cached()
     return jsonify(houses)
 
 @app.route("/api/rating", methods=["POST"])
