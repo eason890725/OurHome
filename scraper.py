@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import gc
 import random
 import time
 import logging
@@ -146,45 +147,55 @@ class RentalScraper:
 
     def fetch_via_playwright(self) -> List[Dict[str, str]]:
         urls = self.target_urls
-        logger.info(f"啟動 Playwright 瀏覽器，準備依序爬取 {len(urls)} 個目標網址...")
+        logger.info(f"啟動超省記憶體 Playwright 瀏覽器，準備依序爬取 {len(urls)} 個目標網址...")
         results = []
         global_seen_ids = set()
 
         with sync_playwright() as p:
+            # 專為 Render 512MB RAM 免費伺服器優化的極致省記憶體 Chromium 參數
             browser = p.chromium.launch(
                 headless=True,
-                args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-blink-features=AutomationControlled"]
+                args=[
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-accelerated-2d-canvas",
+                    "--no-first-run",
+                    "--no-zygote",
+                    "--single-process",
+                    "--disable-gpu",
+                    "--js-flags=--max-old-space-size=128"
+                ]
             )
             
-            context_options = {
-                "user_agent": random.choice(USER_AGENTS),
-                "viewport": {"width": 1280, "height": 800},
-                "device_scale_factor": 1
-            }
-            
-            if os.path.exists(COOKIES_FILE):
-                try:
-                    with open(COOKIES_FILE, "r", encoding="utf-8") as f:
-                        cookies = json.load(f)
-                    context = browser.new_context(**context_options)
-                    context.add_cookies(cookies)
-                except Exception as e:
-                    logger.error(f"載入 cookies.json 失敗: {e}")
-                    context = browser.new_context(**context_options)
-            else:
-                context = browser.new_context(**context_options)
-
-            page = context.new_page()
-
             for i, target_url in enumerate(urls, start=1):
+                page = None
+                context = None
                 try:
+                    context_options = {
+                        "user_agent": random.choice(USER_AGENTS),
+                        "viewport": {"width": 1280, "height": 800},
+                        "device_scale_factor": 1
+                    }
+                    context = browser.new_context(**context_options)
+                    
+                    if os.path.exists(COOKIES_FILE):
+                        try:
+                            with open(COOKIES_FILE, "r", encoding="utf-8") as f:
+                                cookies = json.load(f)
+                            context.add_cookies(cookies)
+                        except Exception as e:
+                            logger.error(f"載入 cookies.json 失敗: {e}")
+
+                    page = context.new_page()
+
                     logger.info(f"[{i}/{len(urls)}] 載入網址: {target_url}")
                     page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
-                    page.wait_for_timeout(3000)
+                    page.wait_for_timeout(2500)
 
                     for _ in range(3):
                         page.evaluate("window.scrollBy(0, 1000);")
-                        page.wait_for_timeout(800)
+                        page.wait_for_timeout(600)
 
                     items = page.eval_on_selector_all(
                         "div.item-info-title a, a.item-title",
@@ -288,6 +299,15 @@ class RentalScraper:
 
                 except Exception as e:
                     logger.error(f"爬取網址 [{target_url}] 失敗: {e}")
+                finally:
+                    if page:
+                        try: page.close()
+                        except Exception: pass
+                    if context:
+                        try: context.close()
+                        except Exception: pass
+                    # 顯式觸發垃圾回收 (GC)，釋放 Chromium 記憶體
+                    gc.collect()
 
             browser.close()
 
