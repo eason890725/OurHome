@@ -6,6 +6,7 @@ import time
 import random
 import logging
 import threading
+import subprocess
 import requests
 from flask import Flask, jsonify, render_template_string, request
 
@@ -659,28 +660,15 @@ def keep_render_alive():
         logger.debug(f"防休眠 Ping 提示: {e}")
 
 def background_crawler_loop():
-    logger.info("啟動 24H 雲端自動巡邏背景線程...")
-    # 啟動時先延遲 15 秒，讓 Gunicorn Web 伺服器先完成熱身並快速回應使用者的網頁存取
-    time.sleep(15)
+    logger.info("啟動 24H 雲端自動巡邏背景獨立行程機制...")
+    time.sleep(10)
     while True:
         try:
-            logger.info("=== 開始執行 24H 雲端巡邏與推播任務 ===")
-            fetched = scraper.run()
-            if fetched:
-                for house in fetched:
-                    full_text = f"{house.get('title', '')} {house.get('address', '')} {house.get('details_text', '')}"
-                    house["cost_info"] = parse_rental_costs(full_text, house.get("price", "0"))
-                batch_res = db.process_houses_batch(fetched)
-                new_houses = batch_res.get("new_houses", [])
-                price_drops = batch_res.get("price_drop_houses", [])
-                
-                if new_houses:
-                    notifier.batch_notify(new_houses, is_price_drop=False)
-                if price_drops:
-                    notifier.batch_notify(price_drops, is_price_drop=True)
-
+            logger.info("=== 喚醒獨立子程序爬蟲 (完全不佔用或鎖定 Web GIL) ===")
+            proc = subprocess.Popen([sys.executable, "run_crawler_standalone.py"])
+            proc.wait()
         except Exception as e:
-            logger.error(f"雲端巡邏任務異常: {e}")
+            logger.error(f"調用獨立爬蟲失敗: {e}")
 
         sleep_seconds = CHECK_INTERVAL_MINUTES * 60 + random.randint(-30, 30)
         logger.info(f"巡邏結束，等待 {sleep_seconds} 秒後進行下一次巡邏...")
