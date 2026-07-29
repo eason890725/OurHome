@@ -6,6 +6,7 @@ import time
 import random
 import logging
 import threading
+import requests
 from flask import Flask, jsonify, render_template_string
 
 from db import HousingDB
@@ -484,6 +485,15 @@ def api_houses():
         h["couples_features"] = scraper.detect_couples_features(full_text)
     return jsonify(houses)
 
+def keep_render_alive():
+    """發送 HTTP Ping 防止 Render 免費伺服器因 15 分鐘無人存取而休眠 (24H 防休眠保活)"""
+    try:
+        render_url = os.environ.get("RENDER_EXTERNAL_URL") or "https://ourhome-aiwq.onrender.com"
+        resp = requests.get(f"{render_url}/", timeout=10)
+        logger.info(f"⚡ 防休眠 Ping 成功 ({render_url}) [Status: {resp.status_code}]")
+    except Exception as e:
+        logger.debug(f"防休眠 Ping 提示: {e}")
+
 def background_crawler_loop():
     logger.info("啟動 24H 雲端自動巡邏背景線程...")
     while True:
@@ -506,9 +516,15 @@ def background_crawler_loop():
         except Exception as e:
             logger.error(f"雲端巡邏任務異常: {e}")
 
+        # 巡邏間隔中，每 5 分鐘進行一次自我 Ping 保活，確保 Render 永遠保持 24H 喚醒狀態！
         sleep_seconds = CHECK_INTERVAL_MINUTES * 60 + random.randint(-30, 30)
         logger.info(f"巡邏結束，等待 {sleep_seconds} 秒後進行下一次巡邏...")
-        time.sleep(sleep_seconds)
+        
+        elapsed = 0
+        while elapsed < sleep_seconds:
+            time.sleep(300) # 每 5 分鐘 ping 一次
+            elapsed += 300
+            keep_render_alive()
 
 crawler_thread = threading.Thread(target=background_crawler_loop, daemon=True)
 crawler_thread.start()
