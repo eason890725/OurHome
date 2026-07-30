@@ -141,6 +141,17 @@ class DiscordNotifier:
             logger.error(f"發送 Discord 通知異常: {e}")
             return False
 
+    def notify_new_house(self, house: Dict[str, Any]) -> bool:
+        return self.send_house_card(house, is_price_drop=False)
+
+    def notify_price_drop(self, house: Dict[str, Any], old_price: str = "", drop_amount: str = "") -> bool:
+        house_copy = dict(house)
+        if old_price:
+            house_copy["old_price"] = old_price
+        if drop_amount:
+            house_copy["drop_amount"] = drop_amount
+        return self.send_house_card(house_copy, is_price_drop=True)
+
     def batch_notify(self, houses: List[Dict[str, Any]], is_price_drop: bool = False):
         for house in houses:
             self.send_house_card(house, is_price_drop=is_price_drop)
