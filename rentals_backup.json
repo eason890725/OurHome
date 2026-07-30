@@ -269,7 +269,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 19:28:39",
-    "updated_at": "2026-07-30 08:35:05"
+    "updated_at": "2026-07-30 08:45:49"
   },
   {
     "house_id": "21714929",
@@ -303,7 +303,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 18:22:35",
-    "updated_at": "2026-07-30 08:34:41"
+    "updated_at": "2026-07-30 08:45:45"
   },
   {
     "house_id": "21689501",
@@ -779,7 +779,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-29 13:52:58",
-    "updated_at": "2026-07-30 08:34:57"
+    "updated_at": "2026-07-30 08:45:48"
   },
   {
     "house_id": "21726047",
@@ -881,7 +881,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 04:05:15",
-    "updated_at": "2026-07-30 08:34:50"
+    "updated_at": "2026-07-30 08:45:46"
   },
   {
     "house_id": "21569411",
@@ -1034,7 +1034,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-30 08:35:18"
+    "updated_at": "2026-07-30 08:45:52"
   },
   {
     "house_id": "21669019",
@@ -1068,7 +1068,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-30 08:35:28"
+    "updated_at": "2026-07-30 08:45:53"
   },
   {
     "house_id": "21717250",
@@ -1119,7 +1119,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-30 08:35:23"
+    "updated_at": "2026-07-30 08:45:52"
   },
   {
     "house_id": "21580263",
@@ -1731,7 +1731,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-30 08:35:33"
+    "updated_at": "2026-07-30 08:45:53"
   },
   {
     "house_id": "21712275",
@@ -2190,7 +2190,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-30 08:35:13"
+    "updated_at": "2026-07-30 08:45:51"
   },
   {
     "house_id": "21716365",
