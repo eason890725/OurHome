@@ -303,7 +303,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 18:22:35",
-    "updated_at": "2026-07-30 08:55:41"
+    "updated_at": "2026-07-30 08:56:44"
   },
   {
     "house_id": "21689501",
@@ -473,7 +473,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 16:10:48",
-    "updated_at": "2026-07-30 08:54:48"
+    "updated_at": "2026-07-30 08:56:44"
   },
   {
     "house_id": "21714098",
@@ -626,7 +626,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 15:03:16",
-    "updated_at": "2026-07-30 08:55:15"
+    "updated_at": "2026-07-30 08:56:54"
   },
   {
     "house_id": "21655417",
@@ -779,7 +779,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-29 13:52:58",
-    "updated_at": "2026-07-30 08:56:02"
+    "updated_at": "2026-07-30 08:56:55"
   },
   {
     "house_id": "21726047",
@@ -881,7 +881,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 04:05:15",
-    "updated_at": "2026-07-30 08:55:59"
+    "updated_at": "2026-07-30 08:56:49"
   },
   {
     "house_id": "21569411",
@@ -1238,7 +1238,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 17:17:45",
-    "updated_at": "2026-07-30 08:54:50"
+    "updated_at": "2026-07-30 08:56:54"
   },
   {
     "house_id": "21672038",
@@ -1731,7 +1731,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-30 08:55:09"
+    "updated_at": "2026-07-30 08:56:44"
   },
   {
     "house_id": "21712275",
@@ -1833,7 +1833,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-30 08:55:12"
+    "updated_at": "2026-07-30 08:56:49"
   },
   {
     "house_id": "21622157",
@@ -1850,7 +1850,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-30 08:54:49"
+    "updated_at": "2026-07-30 08:56:49"
   },
   {
     "house_id": "21666304",
@@ -1999,11 +1999,11 @@
     "address_fingerprint": "中山區明水路696號_11.0坪",
     "price_history": "[{\"price\": \"29,000元/月\", \"numeric\": 29000, \"time\": \"2026-07-28 16:23:25\"}]",
     "details_text": "大直美麗華捷運高樓層兩房一廳溫馨宅\n屋主直租近捷運新上架拎包入住有電梯可開伙\n整層住家2房1廳11坪11F/12F\n明水四季中山區-明水路696號\n距劍南路390公尺\n屋主吳先生3小時內更新昨日234人瀏覽\n29,000元/月\n\n(額外費用 3,400元/月) 29,000 元/月 二個月 另有額外費用3400元/月總支出試算 29,000元/月 水費 電費 管理費 3,400元/月 29,000元/月 29,000元/月 6,000元/月起 130,000元/月 3,500元/月起 31,500元/月起 28,000元/月 28,000元/月",
-    "user_rating": "none",
+    "user_rating": "dislike",
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-30 15:14:00"
+    "updated_at": "2026-07-30 08:56:51"
   },
   {
     "house_id": "21589023",
