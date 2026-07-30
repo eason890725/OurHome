@@ -165,13 +165,9 @@ class RentalScraper:
 
         return sanitize_text(exact_address), sanitize_text(details_text), is_off_market
 
-    def fetch_via_playwright(self) -> List[Dict[str, str]]:
-        urls = self.target_urls
-        logger.info(f"啟動極低記憶體 Chromium (限制 V8 JS Heap 128MB，攔截所有圖片/字型/媒體)，準備爬取 {len(urls)} 個目標網址...")
+    def fetch_single_url(self, target_url: str, global_seen_ids: set) -> List[Dict[str, str]]:
+        """針對單一目標網址獨立啟動與立即關閉 Chromium，記憶體隨用隨釋放 (< 40MB RAM)"""
         results = []
-        global_seen_ids = set()
-
-        # 針對 512MB Render 記憶體容器設計的超低 RAM Chromium 旗標
         ultra_low_memory_args = [
             "--no-sandbox",
             "--disable-setuid-sandbox",
@@ -195,172 +191,158 @@ class RentalScraper:
             "--password-store=basic",
             "--use-gl=swiftshader",
             "--v8-cache-options=none",
-            "--js-flags=--max-old-space-size=128"  # 強制限制 V8 JavaScript Heap 上限 128MB
+            "--js-flags=--max-old-space-size=64"  # 強制限制 V8 JavaScript Heap 上限 64MB
         ]
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                args=ultra_low_memory_args
-            )
-            
-            context_options = {
-                "user_agent": random.choice(USER_AGENTS),
-                "viewport": {"width": 1280, "height": 800},
-                "device_scale_factor": 1
-            }
-            context = browser.new_context(**context_options)
-            
-            # 攔截所有圖片、字型、影片、CSS 媒體資源，省下 85% 記憶體
-            def route_interceptor(route, request):
-                if request.resource_type in ["image", "font", "media", "stylesheet"]:
-                    route.abort()
-                else:
-                    route.continue_()
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True, args=ultra_low_memory_args)
+                context = browser.new_context(
+                    user_agent=random.choice(USER_AGENTS),
+                    viewport={"width": 1280, "height": 800},
+                    device_scale_factor=1
+                )
 
-            context.route("**/*", route_interceptor)
+                # 100% 阻斷所有圖片、字型、影片、CSS，節省 90% 記憶體
+                context.route("**/*", lambda route, req: route.abort() if req.resource_type in ["image", "font", "media", "stylesheet"] else route.continue_())
 
-            if os.path.exists(COOKIES_FILE):
-                try:
-                    with open(COOKIES_FILE, "r", encoding="utf-8") as f:
-                        cookies = json.load(f)
-                    context.add_cookies(cookies)
-                except Exception as e:
-                    logger.error(f"載入 cookies.json 失敗: {e}")
-
-            for i, target_url in enumerate(urls, start=1):
-                page = None
-                try:
-                    logger.info(f"[{i}/{len(urls)}] 載入網址: {target_url}")
-                    page = context.new_page()
-                    page.set_default_timeout(35000)
-                    
+                if os.path.exists(COOKIES_FILE):
                     try:
-                        page.goto(target_url, wait_until="domcontentloaded", timeout=35000)
-                    except Exception as goto_err:
-                        logger.warning(f"⚠️ 載入 [{target_url}] 超時，嘗試備用 commit 模式: {goto_err}")
-                        try:
-                            page.goto(target_url, wait_until="commit", timeout=15000)
-                        except Exception:
-                            pass
+                        with open(COOKIES_FILE, "r", encoding="utf-8") as f:
+                            context.add_cookies(json.load(f))
+                    except Exception:
+                        pass
 
-                    page.wait_for_timeout(1500)
+                page = context.new_page()
+                page.set_default_timeout(30000)
 
-                    for _ in range(3):
-                        page.evaluate("window.scrollBy(0, 1000);")
-                        page.wait_for_timeout(400)
+                try:
+                    page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+                except Exception:
+                    try:
+                        page.goto(target_url, wait_until="commit", timeout=15000)
+                    except Exception:
+                        pass
 
-                    items = page.eval_on_selector_all(
-                        "div.item-info-title a, a.item-title",
-                        """elements => elements.map(el => {
-                            let container = el.closest('section, div.item, div.list-item, div.rent-item, div.item-info') || el.parentElement.parentElement;
-                            let priceEl = container ? container.querySelector('div.item-info-price, .item-info-price-price, strong, .price') : null;
-                            let priceText = priceEl ? priceEl.innerText.trim() : '';
-                            let text = container ? container.innerText : el.innerText;
-                            
-                            return {
-                                full_text: text,
-                                title: el.innerText.trim(),
-                                link: el.href,
-                                priceText: priceText
-                            };
-                        })"""
-                    )
+                page.wait_for_timeout(1000)
+                for _ in range(3):
+                    page.evaluate("window.scrollBy(0, 1000);")
+                    page.wait_for_timeout(300)
 
-                    url_count = 0
-                    for item in items:
-                        full_text = sanitize_text(item.get("full_text", ""))
-                        link = item.get("link", "")
-                        title = sanitize_text(item.get("title", ""))
-                        price_text = item.get("priceText", "")
+                items = page.eval_on_selector_all(
+                    "div.item-info-title a, a.item-title",
+                    """elements => elements.map(el => {
+                        let container = el.closest('section, div.item, div.list-item, div.rent-item, div.item-info') || el.parentElement.parentElement;
+                        let priceEl = container ? container.querySelector('div.item-info-price, .item-info-price-price, strong, .price') : null;
+                        let priceText = priceEl ? priceEl.innerText.trim() : '';
+                        let text = container ? container.innerText : el.innerText;
+                        
+                        return {
+                            full_text: text,
+                            title: el.innerText.trim(),
+                            link: el.href,
+                            priceText: priceText
+                        };
+                    })"""
+                )
 
-                        id_match = re.search(r'/\w*?(\d{7,8})', link)
-                        if not id_match:
+                for item in items:
+                    full_text = sanitize_text(item.get("full_text", ""))
+                    link = item.get("link", "")
+                    title = sanitize_text(item.get("title", ""))
+                    price_text = item.get("priceText", "")
+
+                    id_match = re.search(r'/\w*?(\d{7,8})', link)
+                    if not id_match:
+                        continue
+
+                    house_id = id_match.group(1)
+
+                    if house_id in global_seen_ids:
+                        continue
+
+                    if self.is_invalid_broker_or_ad(title, link):
+                        continue
+
+                    ex_kw = self.contains_exclude_keyword(full_text)
+                    if ex_kw:
+                        logger.info(f"🚫 包含黑名單關鍵字『{ex_kw}』，自動過濾: [{house_id}] {title[:20]}")
+                        continue
+
+                    size_match = re.search(r'(\d+(?:\.\d+)?)\s*坪', full_text)
+                    if size_match:
+                        sqft = float(size_match.group(1))
+                        if sqft < MIN_SIZE_SQFT:
+                            logger.info(f"🚫 坪數 ({sqft} 坪) 小於標準 ({MIN_SIZE_SQFT} 坪)，自動過濾: [{house_id}] {title[:20]}")
                             continue
 
-                        house_id = id_match.group(1)
+                    if not self.is_in_allowed_sections(full_text):
+                        continue
 
-                        if house_id in global_seen_ids:
-                            continue
+                    global_seen_ids.add(house_id)
 
-                        if self.is_invalid_broker_or_ad(title, link):
-                            continue
+                    raw_address = ""
+                    addr_match = re.search(r'((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉][\s\-–—─]*[\u4e00-\u9fa5\dA-Za-z]+(?:路|街|段|巷|弄|號|大道)?)', full_text)
+                    if addr_match:
+                        raw_address = addr_match.group(1)
 
-                        ex_kw = self.contains_exclude_keyword(full_text)
-                        if ex_kw:
-                            logger.info(f"🚫 包含黑名單關鍵字『{ex_kw}』，自動過濾: [{house_id}] {title[:20]}")
-                            continue
+                    exact_addr, details_text, is_off_market = self.fetch_detail_info(house_id, raw_address)
+                    combined_text = f"{full_text} {details_text}"
 
-                        size_match = re.search(r'(\d+(?:\.\d+)?)\s*坪', full_text)
-                        if size_match:
-                            sqft = float(size_match.group(1))
-                            if sqft < MIN_SIZE_SQFT:
-                                logger.info(f"🚫 坪數 ({sqft} 坪) 小於標準 ({MIN_SIZE_SQFT} 坪)，自動過濾: [{house_id}] {title[:20]}")
-                                continue
+                    real_price = 0
+                    dom_p_match = re.search(r'([\d,]+)\s*元', price_text)
+                    if dom_p_match:
+                        parsed_dom_p = parse_numeric_price(dom_p_match.group(1))
+                        if parsed_dom_p >= 5000:
+                            real_price = parsed_dom_p
 
-                        if not self.is_in_allowed_sections(full_text):
-                            continue
+                    if real_price == 0:
+                        clean_text = re.sub(r'(?:今日|已)?降[\d,]+元|下降[\d,]+元', '', combined_text)
+                        all_prices = re.findall(r'([\d,]+)\s*元', clean_text)
+                        valid_prices = [parse_numeric_price(p) for p in all_prices if parse_numeric_price(p) >= 5000]
+                        if valid_prices:
+                            real_price = valid_prices[0]
 
-                        global_seen_ids.add(house_id)
+                    if real_price == 0:
+                        logger.info(f"🚫 無法解析有效刊登租金 (＜ 5,000 元)，自動過濾標籤干擾頁面: [{house_id}] {title[:20]}")
+                        continue
 
-                        raw_address = ""
-                        addr_match = re.search(r'((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉][\s\-–—─]*[\u4e00-\u9fa5\dA-Za-z]+(?:路|街|段|巷|弄|號|大道)?)', full_text)
-                        if addr_match:
-                            raw_address = addr_match.group(1)
+                    price_str = f"{real_price:,}元/月"
+                    size_str = f"{size_match.group(1)}坪" if size_match else "未標示坪數"
 
-                        exact_addr, details_text, is_off_market = self.fetch_detail_info(house_id, raw_address)
-                        combined_text = f"{full_text} {details_text}"
+                    clean_item = {
+                        "house_id": house_id,
+                        "title": title.split("\n")[0].strip(),
+                        "price": price_str,
+                        "numeric_price": real_price,
+                        "address": exact_addr,
+                        "size": size_str,
+                        "link": f"https://rent.591.com.tw/{house_id}",
+                        "details_text": combined_text,
+                        "status": "off_market" if is_off_market else "active"
+                    }
 
-                        real_price = 0
-                        dom_p_match = re.search(r'([\d,]+)\s*元', price_text)
-                        if dom_p_match:
-                            parsed_dom_p = parse_numeric_price(dom_p_match.group(1))
-                            if parsed_dom_p >= 5000:
-                                real_price = parsed_dom_p
+                    results.append(clean_item)
 
-                        if real_price == 0:
-                            clean_text = re.sub(r'(?:今日|已)?降[\d,]+元|下降[\d,]+元', '', combined_text)
-                            all_prices = re.findall(r'([\d,]+)\s*元', clean_text)
-                            valid_prices = [parse_numeric_price(p) for p in all_prices if parse_numeric_price(p) >= 5000]
-                            if valid_prices:
-                                real_price = valid_prices[0]
+                browser.close()
+        except Exception as e:
+            logger.error(f"單一網址爬取失敗 [{target_url}]: {e}")
 
-                        if real_price == 0:
-                            logger.info(f"🚫 無法解析有效刊登租金 (＜ 5,000 元)，自動過濾標籤干擾頁面: [{house_id}] {title[:20]}")
-                            continue
+        gc.collect()
+        return results
 
-                        price_str = f"{real_price:,}元/月"
-                        size_str = f"{size_match.group(1)}坪" if size_match else "未標示坪數"
+    def fetch_via_playwright(self) -> List[Dict[str, str]]:
+        urls = self.target_urls
+        logger.info(f"啟動單網址獨立 Chromium 隔離架構 (V8 JS Heap 64MB 限制)，準備爬取 {len(urls)} 個目標網址...")
+        results = []
+        global_seen_ids = set()
 
-                        clean_item = {
-                            "house_id": house_id,
-                            "title": title.split("\n")[0].strip(),
-                            "price": price_str,
-                            "numeric_price": real_price,
-                            "address": exact_addr,
-                            "size": size_str,
-                            "link": f"https://rent.591.com.tw/{house_id}",
-                            "details_text": combined_text,
-                            "status": "off_market" if is_off_market else "active"
-                        }
-
-                        results.append(clean_item)
-                        url_count += 1
-
-                    logger.info(f"網頁 [{i}] 成功爬取 {url_count} 筆合格房屋")
-
-                except Exception as e:
-                    logger.error(f"爬取網址 [{target_url}] 失敗: {e}")
-                finally:
-                    if page:
-                        try:
-                            page.close()
-                        except Exception:
-                            pass
-
-                gc.collect()
-
-            browser.close()
+        for i, target_url in enumerate(urls, start=1):
+            logger.info(f"[{i}/{len(urls)}] 載入網址: {target_url}")
+            sub_results = self.fetch_single_url(target_url, global_seen_ids)
+            results.extend(sub_results)
+            logger.info(f"網頁 [{i}] 成功爬取 {len(sub_results)} 筆合格房屋")
+            time.sleep(1.0)
 
         logger.info(f"🎯 所有網址爬取完成，全域共抓取到 {len(results)} 筆合格物件！")
         return results

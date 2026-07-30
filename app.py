@@ -695,7 +695,8 @@ def keep_render_alive():
 
 def background_crawler_loop():
     logger.info("啟動 24H 雲端自動巡邏背景獨立行程機制...")
-    time.sleep(10)
+    # 啟動時避開部署峰值，等待 90 秒後啟動首次巡邏
+    time.sleep(90)
     while True:
         try:
             logger.info("=== 喚醒獨立子程序爬蟲 (完全不佔用或鎖定 Web GIL) ===")
