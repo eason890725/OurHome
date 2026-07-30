@@ -2,6 +2,7 @@ import json
 import re
 import os
 import sys
+import time
 import logging
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Dict, Any, List
@@ -17,14 +18,12 @@ PORT = 5000
 db = HousingDB(DB_PATH)
 scraper = RentalScraper()
 
-# 快取記憶體中的房源格式化數據 (秒級零遲鈍輸出)
 _HOUSES_CACHE = []
 _CACHE_LAST_UPDATE = 0
 
 def get_formatted_houses_cached():
     global _HOUSES_CACHE, _CACHE_LAST_UPDATE
     now = time.time()
-    # 快取 5 秒鐘，避免短時間內重複整理網頁時重複運算
     if _HOUSES_CACHE and (now - _CACHE_LAST_UPDATE < 5):
         return _HOUSES_CACHE
     
@@ -57,6 +56,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             --accent-green: #10b981;
             --accent-yellow: #f59e0b;
             --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
             --text-main: #f8fafc;
             --text-sub: #94a3b8;
         }
@@ -110,7 +110,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .backup-btn:hover { background: rgba(255, 255, 255, 0.15); }
 
         .stats-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
             gap: 16px; margin-bottom: 24px;
         }
 
@@ -125,6 +125,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .stat-value.highlight-yellow { color: var(--accent-yellow); }
         .stat-value.highlight-blue { color: var(--accent-blue); }
         .stat-value.highlight-red { color: #f43f5e; }
+        .stat-value.highlight-purple { color: #c084fc; }
 
         .controls-card {
             background: var(--card-bg); backdrop-filter: blur(12px);
@@ -150,6 +151,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         .pill:hover { background: rgba(255, 255, 255, 0.12); color: var(--text-main); }
         .pill.active { background: #0284c7; color: white; border-color: #38bdf8; font-weight: 600; }
+        .pill.pill-unrated.active { background: #8b5cf6; color: white; border-color: #a78bfa; font-weight: 600; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4); }
         .pill.pill-like.active { background: #e11d48; color: white; border-color: #fb7185; }
         .pill.pill-neutral.active { background: #d97706; color: white; border-color: #fbbf24; }
         .pill.pill-dislike.active { background: #475569; color: white; border-color: #94a3b8; }
@@ -173,6 +175,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         .house-card.rated-like { border-color: rgba(244, 63, 94, 0.5); background: rgba(30, 41, 59, 0.85); }
         .house-card.rated-dislike { opacity: 0.5; filter: grayscale(0.5); }
+        .house-card.rated-none { border-color: rgba(139, 92, 246, 0.3); }
 
         .house-card:hover {
             transform: translateY(-3px); border-color: rgba(56, 189, 248, 0.4);
@@ -207,6 +210,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .badge-normal {
             display: inline-block; background: rgba(56, 189, 248, 0.15); color: #38bdf8;
             border: 1px solid rgba(56, 189, 248, 0.3); font-size: 12px; font-weight: 600;
+            padding: 4px 10px; border-radius: 6px; margin-bottom: 8px;
+        }
+
+        .badge-unrated {
+            display: inline-block; background: rgba(139, 92, 246, 0.15); color: #c084fc;
+            border: 1px solid rgba(139, 92, 246, 0.3); font-size: 12px; font-weight: 600;
             padding: 4px 10px; border-radius: 6px; margin-bottom: 8px;
         }
 
@@ -274,6 +283,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="stat-value highlight-blue" id="stat-total">0 筆</div>
             </div>
             <div class="stat-card">
+                <div class="stat-label">❓ 未選擇/未看過</div>
+                <div class="stat-value highlight-purple" id="stat-unrated">0 筆</div>
+            </div>
+            <div class="stat-card">
                 <div class="stat-label">❤️ 喜愛精選物件</div>
                 <div class="stat-value highlight-red" id="stat-like">0 筆</div>
             </div>
@@ -284,10 +297,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <div class="stat-card">
                 <div class="stat-label">平均預估月總成本</div>
                 <div class="stat-value highlight-green" id="stat-avg-cost">$0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">最低預估月總成本</div>
-                <div class="stat-value" id="stat-min-cost">$0</div>
             </div>
         </div>
 
@@ -347,7 +356,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         async function fetchHouses() {
             try {
-                // 非阻塞並行同步
                 syncLocalRatingsToServer();
 
                 const res = await fetch('/api/houses');
@@ -420,10 +428,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }
             });
 
-            const countRating = (r) => allHouses.filter(h => h.user_rating === r).length;
+            const countRating = (r) => {
+                if (r === 'none') {
+                    return allHouses.filter(h => !h.user_rating || h.user_rating === 'none').length;
+                }
+                return allHouses.filter(h => h.user_rating === r).length;
+            };
 
             const fixedPillsHtml = `
                 <div class="pill ${currentFilter === 'all' ? 'active' : ''}" data-filter="all" onclick="setFilter('all', this)">全部房源</div>
+                <div class="pill pill-unrated ${currentFilter === 'unrated' ? 'active' : ''}" data-filter="unrated" onclick="setFilter('unrated', this)">❓ 未選擇 (${countRating('none')})</div>
                 <div class="pill pill-like ${currentFilter === 'like' ? 'active' : ''}" data-filter="like" onclick="setFilter('like', this)">❤️ 喜歡的房源 (${countRating('like')})</div>
                 <div class="pill pill-neutral ${currentFilter === 'neutral' ? 'active' : ''}" data-filter="neutral" onclick="setFilter('neutral', this)">😐 普通紀錄 (${countRating('neutral')})</div>
                 <div class="pill pill-dislike ${currentFilter === 'dislike' ? 'active' : ''}" data-filter="dislike" onclick="setFilter('dislike', this)">💔 不喜歡/已淘汰 (${countRating('dislike')})</div>
@@ -442,6 +456,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         function updateStats() {
             const total = allHouses.length;
+            const unratedCount = allHouses.filter(h => !h.user_rating || h.user_rating === 'none').length;
             const likeCount = allHouses.filter(h => h.user_rating === 'like').length;
             const taipowerCount = allHouses.filter(h => h.cost_info && h.cost_info.is_taipower).length;
             let totalCostSum = 0, minCost = 999999;
@@ -460,10 +475,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             const avgCost = total > 0 ? Math.round(totalCostSum / total) : 0;
             document.getElementById('stat-total').innerText = `${total} 筆`;
+            document.getElementById('stat-unrated').innerText = `${unratedCount} 筆`;
             document.getElementById('stat-like').innerText = `${likeCount} 筆`;
             document.getElementById('stat-taipower').innerText = `${taipowerCount} 筆`;
             document.getElementById('stat-avg-cost').innerText = `$${avgCost.toLocaleString()} /月`;
-            document.getElementById('stat-min-cost').innerText = minCost < 999999 ? `$${minCost.toLocaleString()} /月` : '$0';
         }
 
         function setFilter(filterType, element) {
@@ -517,6 +532,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     if (!matchesAnyTerm) return false;
                 }
 
+                if (currentFilter === 'unrated') return !h.user_rating || h.user_rating === 'none';
                 if (currentFilter === 'like') return h.user_rating === 'like';
                 if (currentFilter === 'neutral') return h.user_rating === 'neutral';
                 if (currentFilter === 'dislike') return h.user_rating === 'dislike';
@@ -569,6 +585,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <div class="card-header">
                             ${hasSubsidy ? '<div class="badge-taipower" style="background:rgba(16, 185, 129, 0.15); color:#34d399; border-color:rgba(16, 185, 129, 0.3);">📜 可申請租屋補助</div>' : ''}
                             ${cost.is_taipower ? '<div class="badge-taipower">✨ 台電省錢神房 (台電計費)</div>' : (!hasSubsidy ? '<div class="badge-normal">🏠 特選優質物件</div>' : '')}
+                            ${rating === 'none' ? '<div class="badge-unrated">❓ 尚未評分</div>' : ''}
                             <a href="${h.link}" target="_blank" class="house-title">${h.title}</a>
                         </div>
                         <div class="meta-pills">

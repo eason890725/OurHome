@@ -14,6 +14,11 @@ from search_filters import get_target_search_urls, RENT_MIN, RENT_MAX, ALLOWED_S
 
 logger = logging.getLogger(__name__)
 
+def sanitize_text(text: str) -> str:
+    if not text:
+        return ""
+    return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', str(text))
+
 def parse_numeric_price(price_str: str) -> int:
     if not price_str:
         return 0
@@ -107,11 +112,10 @@ class RentalScraper:
         }
 
         try:
-            resp = requests.get(url, headers=headers, timeout=5)
+            resp = requests.get(url, headers=headers, timeout=6)
             if resp.status_code == 200:
                 html_text = resp.text
                 
-                # 1. 優先從 og:description 精準獲取 591 官方標示的真實地址 (例：位于林森北路399巷21號)
                 meta_match = re.search(r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\'\n]+)["\']', html_text)
                 if not meta_match:
                     meta_match = re.search(r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\'\n]+)["\']', html_text)
@@ -129,13 +133,11 @@ class RentalScraper:
                         else:
                             exact_address = clean_address_string(loc_str)
 
-                # 備用方案：如果 meta 標籤未抓到，再嘗試其他位置
                 if not exact_address or "未提供" in exact_address:
                     m_addr = re.search(r'地\s*址[：:\s]*([^<"\n]+)', html_text)
                     if m_addr:
                         exact_address = clean_address_string(m_addr.group(1).strip())
 
-                # 2. 抓取費用細項說明
                 clean_lines = [re.sub(r'<[^>]+>', ' ', l).strip() for l in html_text.split('\n') if l.strip()]
                 fee_lines = [l for l in clean_lines if any(k in l for k in ["費用", "管理費", "電費", "水費", "租金包含", "元/月", "一度", "額外費用"])]
                 details_text = " ".join(fee_lines[:15])
@@ -143,11 +145,11 @@ class RentalScraper:
         except Exception as e:
             logger.debug(f"HTTP GET 補充內頁失敗 [{house_id}]: {e}")
 
-        return exact_address, details_text
+        return sanitize_text(exact_address), sanitize_text(details_text)
 
     def fetch_via_playwright(self) -> List[Dict[str, str]]:
         urls = self.target_urls
-        logger.info(f"啟動省記憶體與長連線穩定版 Playwright 瀏覽器，準備依序爬取 {len(urls)} 個目標網址...")
+        logger.info(f"啟動高容錯與長連線 Playwright 瀏覽器，準備依序爬取 {len(urls)} 個目標網址...")
         results = []
         global_seen_ids = set()
 
@@ -180,12 +182,22 @@ class RentalScraper:
                 except Exception as e:
                     logger.error(f"載入 cookies.json 失敗: {e}")
 
-            page = context.new_page()
-
             for i, target_url in enumerate(urls, start=1):
+                page = None
                 try:
                     logger.info(f"[{i}/{len(urls)}] 載入網址: {target_url}")
-                    page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+                    page = context.new_page()
+                    page.set_default_timeout(45000)
+                    
+                    try:
+                        page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
+                    except Exception as goto_err:
+                        logger.warning(f"⚠️ 載入 [{target_url}] 超時或被微幅阻擋，嘗試備用 commit 模式: {goto_err}")
+                        try:
+                            page.goto(target_url, wait_until="commit", timeout=20000)
+                        except Exception:
+                            pass
+
                     page.wait_for_timeout(2000)
 
                     for _ in range(3):
@@ -211,9 +223,9 @@ class RentalScraper:
 
                     url_count = 0
                     for item in items:
-                        full_text = item.get("full_text", "")
+                        full_text = sanitize_text(item.get("full_text", ""))
                         link = item.get("link", "")
-                        title = item.get("title", "")
+                        title = sanitize_text(item.get("title", ""))
                         price_text = item.get("priceText", "")
 
                         id_match = re.search(r'/\w*?(\d{7,8})', link)
@@ -250,11 +262,9 @@ class RentalScraper:
                         if addr_match:
                             raw_address = addr_match.group(1)
 
-                        # 秒級極速補充內頁地址與費用 (優先 591 官方 Meta 標籤)
                         exact_addr, details_text = self.fetch_detail_info(house_id, raw_address)
                         combined_text = f"{full_text} {details_text}"
 
-                        # 精準租金解析（排除「降500元」或「降1200元」之降價標籤干擾）
                         real_price = 0
                         dom_p_match = re.search(r'([\d,]+)\s*元', price_text)
                         if dom_p_match:
@@ -294,6 +304,12 @@ class RentalScraper:
 
                 except Exception as e:
                     logger.error(f"爬取網址 [{target_url}] 失敗: {e}")
+                finally:
+                    if page:
+                        try:
+                            page.close()
+                        except Exception:
+                            pass
 
                 gc.collect()
 

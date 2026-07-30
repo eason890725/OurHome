@@ -9,6 +9,12 @@ from typing import Optional, Dict, List, Tuple, Any
 
 logger = logging.getLogger(__name__)
 
+def sanitize_text(text: str) -> str:
+    if not text:
+        return ""
+    # 清除不可見的 ASCII 控制字元 (防止 JSON 語法解析錯誤)
+    return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', str(text))
+
 def parse_numeric_price(price_str: str) -> int:
     if not price_str:
         return 0
@@ -83,27 +89,31 @@ class HousingDB:
                 
             conn.commit()
             
-        # 自動從 GitHub repo 備份檔 rentals_backup.json 無感還原所有歷史物件
         self.restore_from_backup_json()
 
     def sync_backup_json(self):
-        """將 SQLite 中的所有資料同步匯出至 rentals_backup.json 以保存在 GitHub 中"""
+        """原子寫入 (Atomic Write) 將 SQLite 中的所有資料同步匯出至 rentals_backup.json，防止併發毀損"""
         houses = self.get_all_houses()
         if not houses:
             return
         try:
-            with open("rentals_backup.json", "w", encoding="utf-8") as f:
+            tmp_file = "rentals_backup.json.tmp"
+            with open(tmp_file, "w", encoding="utf-8") as f:
                 json.dump(houses, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_file, "rentals_backup.json")
         except Exception as e:
             logger.debug(f"同步 rentals_backup.json 失敗: {e}")
 
     def restore_from_backup_json(self):
-        """當資料庫為空時（如 Render 重設硬碟），自動從 repo 中的 rentals_backup.json 快速還原所有歷史資料與評價"""
+        """當資料庫為空時（如 Render 重設硬碟），自動清理控制字元並從 rentals_backup.json 還原"""
         if not os.path.exists("rentals_backup.json"):
             return
         try:
             with open("rentals_backup.json", "r", encoding="utf-8") as f:
-                houses = json.load(f)
+                raw_content = f.read()
+            
+            cleaned_content = sanitize_text(raw_content)
+            houses = json.loads(cleaned_content)
             if not houses:
                 return
             
@@ -127,15 +137,15 @@ class HousingDB:
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, (
                             house_id,
-                            h.get("title", ""),
-                            h.get("price", ""),
+                            sanitize_text(h.get("title", "")),
+                            sanitize_text(h.get("price", "")),
                             h.get("numeric_price", 0),
-                            h.get("address", ""),
-                            h.get("size", ""),
-                            h.get("link", ""),
-                            h.get("address_fingerprint", ""),
+                            sanitize_text(h.get("address", "")),
+                            sanitize_text(h.get("size", "")),
+                            sanitize_text(h.get("link", "")),
+                            sanitize_text(h.get("address_fingerprint", "")),
                             history_str,
-                            h.get("details_text", ""),
+                            sanitize_text(h.get("details_text", "")),
                             h.get("user_rating", "none"),
                             h.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
                             h.get("updated_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -221,12 +231,12 @@ class HousingDB:
         if not house_id:
             return {"action": "IGNORE"}
 
-        title = house_data.get("title", "")
-        current_price_str = house_data.get("price", "0")
+        title = sanitize_text(house_data.get("title", ""))
+        current_price_str = sanitize_text(house_data.get("price", "0"))
         current_numeric_price = parse_numeric_price(current_price_str)
-        address = house_data.get("address", "")
-        size = house_data.get("size", "")
-        details_text = house_data.get("details_text", "")
+        address = sanitize_text(house_data.get("address", ""))
+        size = sanitize_text(house_data.get("size", ""))
+        details_text = sanitize_text(house_data.get("details_text", ""))
         fingerprint = generate_address_fingerprint(address, size, current_price_str)
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -323,7 +333,6 @@ class HousingDB:
             elif res["action"] == "PRICE_DROP":
                 results["price_drop_houses"].append(res["house"])
         
-        # 批次處理後自動同步備份檔 rentals_backup.json
         self.sync_backup_json()
         return results
 
