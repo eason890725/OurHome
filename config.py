@@ -3,6 +3,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# 0. 執行環境來源辨識 ('☁️ Render 雲端' vs '💻 本地 PC')
+IS_RENDER = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID") or os.getenv("RENDER_EXTERNAL_URL"))
+ENV_NAME = os.getenv("ENV_NAME", "☁️ Render 雲端" if IS_RENDER else "💻 本地 PC")
+
 # 1. 租屋模式設定 ('couple': 雙人同住模式 | 'single': 單人居住模式)
 MODE = os.getenv("MODE", "couple").lower()
 

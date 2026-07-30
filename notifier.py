@@ -3,6 +3,7 @@ import random
 import requests
 import logging
 from typing import Dict, Any, List
+from config import ENV_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -12,14 +13,14 @@ class DiscordNotifier:
 
     def send_house_card(self, house: Dict[str, Any], is_price_drop: bool = False) -> bool:
         """
-        發送雙人同住模式房屋資訊至 Discord Webhook
+        發送雙人同住模式房屋資訊至 Discord Webhook (自動標註 💻 本地 PC 或 ☁️ Render 雲端)
         """
         cost_info = house.get("cost_info", {})
         is_taipower = cost_info.get("is_taipower", False)
         
         if not self.webhook_url:
             card_type = "🚨 降價警報" if is_price_drop else "🏠 新上架"
-            logger.info(f"[未設定 Discord Webhook] 模擬發送通知 ({card_type}):\n"
+            logger.info(f"[未設定 Discord Webhook] 模擬發送通知 ({card_type}) [{ENV_NAME}]:\n"
                         f"物件：{house.get('title')}\n"
                         f"租金：{house.get('price')} (原價: {house.get('old_price', 'N/A')})\n"
                         f"預估真實雙人月成本 (400度)：{cost_info.get('total_estimated_cost_str', '未估算')}\n"
@@ -104,18 +105,24 @@ class DiscordNotifier:
             "inline": True
         })
 
+        fields.append({
+            "name": "🖥️ 巡邏發送來源",
+            "value": f"**{ENV_NAME}**",
+            "inline": True
+        })
+
         embed = {
             "title": title_text[:250],
             "url": house.get("link", ""),
             "color": color,
             "fields": fields,
             "footer": {
-                "text": "OurHome 雙人同住租屋品質與成本監控系統"
+                "text": f"OurHome 雙人同住租屋品質與成本監控系統 • 來源: {ENV_NAME}"
             }
         }
 
         payload = {
-            "username": "雙人好房速報 Bot",
+            "username": f"雙人好房速報 Bot [{ENV_NAME}]",
             "avatar_url": "https://cdn-icons-png.flaticon.com/512/619/619032.png",
             "embeds": [embed]
         }
@@ -124,7 +131,7 @@ class DiscordNotifier:
             for attempt in range(3):
                 res = requests.post(self.webhook_url, json=payload, timeout=10)
                 if res.status_code in (200, 204):
-                    logger.info(f"成功發送 Discord 通知 ({'降價警報' if is_price_drop else '新物件'}): {house.get('title')}")
+                    logger.info(f"成功發送 Discord 通知 [{ENV_NAME}] ({'降價警報' if is_price_drop else '新物件'}): {house.get('title')}")
                     return True
                 elif res.status_code == 429:
                     try:
