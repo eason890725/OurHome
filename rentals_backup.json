@@ -303,7 +303,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 18:22:35",
-    "updated_at": "2026-07-30 08:08:45"
+    "updated_at": "2026-07-30 08:09:52"
   },
   {
     "house_id": "21689501",
@@ -1833,7 +1833,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-30 07:22:06"
+    "updated_at": "2026-07-30 08:09:57"
   },
   {
     "house_id": "21622157",
