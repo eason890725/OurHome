@@ -31,7 +31,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-30 07:36:36",
-    "updated_at": "2026-07-30 07:45:49"
+    "updated_at": "2026-07-30 07:48:19"
   },
   {
     "house_id": "21730925",
@@ -830,7 +830,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-29 13:52:58",
-    "updated_at": "2026-07-30 07:47:12"
+    "updated_at": "2026-07-30 07:48:21"
   },
   {
     "house_id": "21726047",
@@ -1323,7 +1323,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 17:17:45",
-    "updated_at": "2026-07-30 07:48:12"
+    "updated_at": "2026-07-30 07:48:24"
   },
   {
     "house_id": "21721231",
@@ -2190,7 +2190,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-30 07:37:05"
+    "updated_at": "2026-07-30 07:48:17"
   },
   {
     "house_id": "21610119",
