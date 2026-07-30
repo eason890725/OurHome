@@ -46,8 +46,14 @@ class HousingDB:
         self._init_db()
 
     def _get_connection(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
+        """建立具備 WAL 高併發模式與 30 秒解鎖緩衝的 SQLite 連線"""
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row
+        try:
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute("PRAGMA synchronous=NORMAL;")
+        except Exception:
+            pass
         return conn
 
     def _init_db(self):
@@ -244,6 +250,7 @@ class HousingDB:
         address = sanitize_text(house_data.get("address", ""))
         size = sanitize_text(house_data.get("size", ""))
         details_text = sanitize_text(house_data.get("details_text", ""))
+        status = house_data.get("status", "active")
         fingerprint = generate_address_fingerprint(address, size, current_price_str)
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -278,7 +285,7 @@ class HousingDB:
                     initial_history,
                     details_text,
                     'none',
-                    'active',
+                    status,
                     0,
                     now_str,
                     now_str
@@ -302,13 +309,14 @@ class HousingDB:
 
                     cursor.execute("""
                         UPDATE houses 
-                        SET price = ?, numeric_price = ?, price_history = ?, details_text = ?, status = 'active', missing_count = 0, updated_at = ?
+                        SET price = ?, numeric_price = ?, price_history = ?, details_text = ?, status = ?, missing_count = 0, updated_at = ?
                         WHERE house_id = ?
                     """, (
                         current_price_str,
                         current_numeric_price,
                         json.dumps(history, ensure_ascii=False),
                         details_text,
+                        status,
                         now_str,
                         house_id
                     ))
@@ -328,8 +336,7 @@ class HousingDB:
                         "house": updated_house
                     }
                 else:
-                    # 重新出現在爬蟲結果中，恢復 active 狀態
-                    cursor.execute("UPDATE houses SET status = 'active', missing_count = 0, updated_at = ? WHERE house_id = ?", (now_str, house_id))
+                    cursor.execute("UPDATE houses SET status = ?, missing_count = 0, updated_at = ? WHERE house_id = ?", (status, now_str, house_id))
                     conn.commit()
                     return {"action": "IGNORE"}
 
@@ -338,7 +345,6 @@ class HousingDB:
             "new_houses": [],
             "price_drop_houses": []
         }
-        active_ids = {str(h.get("house_id")) for h in houses_list if h.get("house_id")}
 
         for house in houses_list:
             res = self.process_house(house)
@@ -347,25 +353,6 @@ class HousingDB:
             elif res["action"] == "PRICE_DROP":
                 results["price_drop_houses"].append(res["house"])
         
-        # 檢測已出租 / 已下架物件 (連續未在 591 搜尋清單中出現)
-        with self._get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT house_id, missing_count, status FROM houses")
-            all_rows = cursor.fetchall()
-            for row in all_rows:
-                hid = str(row["house_id"])
-                curr_missing = row["missing_count"] or 0
-                if hid in active_ids:
-                    cursor.execute("UPDATE houses SET missing_count = 0, status = 'active' WHERE house_id = ?", (hid,))
-                else:
-                    new_missing = curr_missing + 1
-                    # 當連續 2 次巡邏皆未出現在 591 清單中，判定為已下架/已出租
-                    new_status = 'off_market' if new_missing >= 2 else row["status"]
-                    if new_status == 'off_market' and row["status"] != 'off_market':
-                        logger.info(f"🏚️ 辨識出已下架/已出租房源: [{hid}]")
-                    cursor.execute("UPDATE houses SET missing_count = ?, status = ? WHERE house_id = ?", (new_missing, new_status, hid))
-            conn.commit()
-
         self.sync_backup_json()
         return results
 
