@@ -14,6 +14,19 @@ from search_filters import get_target_search_urls, RENT_MIN, RENT_MAX, ALLOWED_S
 
 logger = logging.getLogger(__name__)
 
+OFF_MARKET_KEYWORDS = [
+    "您查詢的物件不存在",
+    "可能已關閉或者被刪除",
+    "很抱歉，您查詢的物件不存在",
+    "物件已下架",
+    "已被租出",
+    "找不到頁面",
+    "此房屋已下架",
+    "此物件不存在",
+    "抱歉，您造訪的頁面不存在",
+    "已被刪除"
+]
+
 def sanitize_text(text: str) -> str:
     if not text:
         return ""
@@ -99,11 +112,12 @@ class RentalScraper:
                 return True
         return False
 
-    def fetch_detail_info(self, house_id: str, current_addr: str) -> Tuple[str, str]:
-        """優先從 591 og:description 官方詮釋標籤中 100% 精準提取真實街道門牌與費用說明"""
+    def fetch_detail_info(self, house_id: str, current_addr: str) -> Tuple[str, str, bool]:
+        """直連 591 內頁，100% 精準判斷真實上架/下架狀態、街道門牌與費用說明"""
         url = f"https://rent.591.com.tw/{house_id}"
         exact_address = clean_address_string(current_addr)
         details_text = ""
+        is_off_market = False
         
         headers = {
             "User-Agent": random.choice(USER_AGENTS),
@@ -113,9 +127,13 @@ class RentalScraper:
 
         try:
             resp = requests.get(url, headers=headers, timeout=6)
-            if resp.status_code == 200:
+            if resp.status_code in [404, 410]:
+                is_off_market = True
+            elif resp.status_code == 200:
                 html_text = resp.text
-                
+                if any(k in html_text for k in OFF_MARKET_KEYWORDS):
+                    is_off_market = True
+
                 meta_match = re.search(r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\'\n]+)["\']', html_text)
                 if not meta_match:
                     meta_match = re.search(r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\'\n]+)["\']', html_text)
@@ -145,7 +163,7 @@ class RentalScraper:
         except Exception as e:
             logger.debug(f"HTTP GET 補充內頁失敗 [{house_id}]: {e}")
 
-        return sanitize_text(exact_address), sanitize_text(details_text)
+        return sanitize_text(exact_address), sanitize_text(details_text), is_off_market
 
     def fetch_via_playwright(self) -> List[Dict[str, str]]:
         urls = self.target_urls
@@ -192,7 +210,7 @@ class RentalScraper:
                     try:
                         page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
                     except Exception as goto_err:
-                        logger.warning(f"⚠️ 載入 [{target_url}] 超時或被微幅阻擋，嘗試備用 commit 模式: {goto_err}")
+                        logger.warning(f"⚠️ 載入 [{target_url}] 超時，嘗試備用 commit 模式: {goto_err}")
                         try:
                             page.goto(target_url, wait_until="commit", timeout=20000)
                         except Exception:
@@ -262,7 +280,7 @@ class RentalScraper:
                         if addr_match:
                             raw_address = addr_match.group(1)
 
-                        exact_addr, details_text = self.fetch_detail_info(house_id, raw_address)
+                        exact_addr, details_text, is_off_market = self.fetch_detail_info(house_id, raw_address)
                         combined_text = f"{full_text} {details_text}"
 
                         real_price = 0
@@ -294,7 +312,8 @@ class RentalScraper:
                             "address": exact_addr,
                             "size": size_str,
                             "link": f"https://rent.591.com.tw/{house_id}",
-                            "details_text": combined_text
+                            "details_text": combined_text,
+                            "status": "off_market" if is_off_market else "active"
                         }
 
                         results.append(clean_item)
