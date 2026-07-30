@@ -1,6 +1,7 @@
 import json
 import re
 import os
+import time
 import sqlite3
 import logging
 import base64
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 GITHUB_REPO = "eason890725/OurHome"
 GITHUB_FILE_PATH = "rentals_backup.json"
+_LAST_GITHUB_PUSH_TIME = 0.0
 
 def sanitize_text(text: str) -> str:
     if not text:
@@ -109,6 +111,7 @@ class HousingDB:
 
     def sync_backup_json(self):
         """原子寫入 (Atomic Write) 並透由 GitHub API 將 Render 雲端最新 DB 雙向寫回 GitHub"""
+        global _LAST_GITHUB_PUSH_TIME
         houses = self.get_all_houses()
         if not houses:
             return
@@ -119,9 +122,10 @@ class HousingDB:
                 f.write(json_bytes)
             os.replace(tmp_file, "rentals_backup.json")
             
-            # 若設置了 GITHUB_TOKEN，透由 GitHub API 全自動雙向同步
             token = os.environ.get("GITHUB_TOKEN")
-            if token:
+            now = time.time()
+            if token and (now - _LAST_GITHUB_PUSH_TIME >= 15.0):
+                _LAST_GITHUB_PUSH_TIME = now
                 self._push_to_github_api(token, json_bytes)
 
         except Exception as e:
@@ -143,7 +147,7 @@ class HousingDB:
 
             content_b64 = base64.b64encode(json_bytes).decode("utf-8")
             payload = {
-                "message": f"data: auto-sync rentals_backup.json ({len(json.loads(json_bytes.decode('utf-8')))} items) from Render cloud",
+                "message": f"data: auto-sync rentals_backup.json ({len(json.loads(json_bytes.decode('utf-8')))} items) from Render cloud [skip ci]",
                 "content": content_b64,
                 "branch": "main"
             }
