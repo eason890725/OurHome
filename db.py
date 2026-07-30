@@ -401,6 +401,7 @@ class HousingDB:
             elif res["action"] == "PRICE_DROP":
                 results["price_drop_houses"].append(res["house"])
         
+        # 整批 10 分鐘巡邏結束後，僅統一回寫一次 GitHub
         self.sync_backup_json()
         return results
 
