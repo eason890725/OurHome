@@ -2,6 +2,7 @@ import json
 import re
 import os
 import time
+import hashlib
 import sqlite3
 import logging
 import base64
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 GITHUB_REPO = "eason890725/OurHome"
 GITHUB_FILE_PATH = "rentals_backup.json"
-_LAST_GITHUB_PUSH_TIME = 0.0
+_LAST_PUSHED_HASH = ""
 
 def sanitize_text(text: str) -> str:
     if not text:
@@ -109,23 +110,29 @@ class HousingDB:
             
         self.restore_from_backup_json()
 
-    def sync_backup_json(self):
-        """原子寫入 (Atomic Write) 並透由 GitHub API 將 Render 雲端最新 DB 雙向寫回 GitHub"""
-        global _LAST_GITHUB_PUSH_TIME
+    def sync_backup_json(self, force_push: bool = False):
+        """僅在 DB 內容實質變更 (Hash 改變) 時，才寫入硬碟並呼叫 GitHub API"""
+        global _LAST_PUSHED_HASH
         houses = self.get_all_houses()
         if not houses:
             return
         try:
             json_bytes = json.dumps(houses, ensure_ascii=False, indent=2).encode("utf-8")
+            current_hash = hashlib.md5(json_bytes).hexdigest()
+            
+            # 若 Hash 沒有變更且非強制，直接跳過 (完全不寫硬碟也不呼叫 API)
+            if not force_push and current_hash == _LAST_PUSHED_HASH:
+                return
+
+            _LAST_PUSHED_HASH = current_hash
+
             tmp_file = "rentals_backup.json.tmp"
             with open(tmp_file, "wb") as f:
                 f.write(json_bytes)
             os.replace(tmp_file, "rentals_backup.json")
             
             token = os.environ.get("GITHUB_TOKEN")
-            now = time.time()
-            if token and (now - _LAST_GITHUB_PUSH_TIME >= 15.0):
-                _LAST_GITHUB_PUSH_TIME = now
+            if token:
                 self._push_to_github_api(token, json_bytes)
 
         except Exception as e:
@@ -218,7 +225,7 @@ class HousingDB:
         except Exception as e:
             logger.error(f"從 rentals_backup.json 還原失敗: {e}")
 
-    def update_house_rating(self, house_id: str, rating: str) -> bool:
+    def update_house_rating(self, house_id: str, rating: str, sync_git: bool = True) -> bool:
         """更新房屋的使用者評價標記 (like / neutral / dislike / none)"""
         valid_ratings = {"like", "neutral", "dislike", "none"}
         if rating not in valid_ratings:
@@ -234,7 +241,7 @@ class HousingDB:
             """, (rating, now_str, str(house_id)))
             conn.commit()
             success = cursor.rowcount > 0
-            if success:
+            if success and sync_git:
                 self.sync_backup_json()
             return success
 
@@ -401,7 +408,6 @@ class HousingDB:
             elif res["action"] == "PRICE_DROP":
                 results["price_drop_houses"].append(res["house"])
         
-        # 整批 10 分鐘巡邏結束後，僅統一回寫一次 GitHub
         self.sync_backup_json()
         return results
 

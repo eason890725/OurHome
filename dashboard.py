@@ -165,7 +165,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         .listings-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px;
+            display grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px;
         }
 
         .house-card {
@@ -335,6 +335,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <script>
         let allHouses = [];
         let currentFilter = 'all';
+        let isFirstLoad = true;
 
         const SYNONYM_GROUPS = [
             ["租補", "租屋補助", "租金補貼", "補助", "社宅", "補貼", "可補"],
@@ -366,7 +367,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         async function fetchHouses() {
             try {
-                syncLocalRatingsToServer();
+                if (isFirstLoad) {
+                    syncLocalRatingsToServer();
+                    isFirstLoad = false;
+                }
 
                 const res = await fetch('/api/houses');
                 allHouses = await res.json();
@@ -666,7 +670,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 data = json.loads(post_data.decode('utf-8'))
                 house_id = str(data.get("house_id", ""))
                 rating = str(data.get("rating", "none"))
-                success = db.update_house_rating(house_id, rating)
+                success = db.update_house_rating(house_id, rating, sync_git=True)
 
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -675,7 +679,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             except Exception as e:
                 self.send_response(400)
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                self.wfile.write(json.dumps({"error": str(e)}), encode('utf-8'))
         elif self.path == "/api/sync_ratings":
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
@@ -683,9 +687,13 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 data = json.loads(post_data.decode('utf-8'))
                 ratings = data.get("ratings", {})
                 synced_count = 0
+                changed = False
                 for hid, r in ratings.items():
-                    if db.update_house_rating(str(hid), str(r)):
+                    if db.update_house_rating(str(hid), str(r), sync_git=False):
                         synced_count += 1
+                        changed = True
+                if changed:
+                    db.sync_backup_json()
 
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

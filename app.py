@@ -341,6 +341,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <script>
         let allHouses = [];
         let currentFilter = 'all';
+        let isFirstLoad = true;
 
         const SYNONYM_GROUPS = [
             ["租補", "租屋補助", "租金補貼", "補助", "社宅", "補貼", "可補"],
@@ -372,7 +373,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         async function fetchHouses() {
             try {
-                syncLocalRatingsToServer();
+                if (isFirstLoad) {
+                    syncLocalRatingsToServer();
+                    isFirstLoad = false;
+                }
 
                 const res = await fetch('/api/houses');
                 allHouses = await res.json();
@@ -658,7 +662,7 @@ def api_rating():
         data = request.get_json(force=True)
         house_id = str(data.get("house_id", ""))
         rating = str(data.get("rating", "none"))
-        success = db.update_house_rating(house_id, rating)
+        success = db.update_house_rating(house_id, rating, sync_git=True)
         return jsonify({"success": success, "house_id": house_id, "rating": rating})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -669,9 +673,13 @@ def api_sync_ratings():
         data = request.get_json(force=True)
         ratings = data.get("ratings", {})
         synced_count = 0
+        changed = False
         for hid, r in ratings.items():
-            if db.update_house_rating(str(hid), str(r)):
+            if db.update_house_rating(str(hid), str(r), sync_git=False):
                 synced_count += 1
+                changed = True
+        if changed:
+            db.sync_backup_json()
         return jsonify({"success": True, "synced_count": synced_count})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
