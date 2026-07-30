@@ -110,6 +110,6 @@ class HousingMonitorApp:
             time.sleep(jitter_seconds)
         self.check_new_listings()
 
-    if __name__ == "__main__":
-        app = HousingMonitorApp()
-        app.start_schedule()
+if __name__ == "__main__":
+    app = HousingMonitorApp()
+    app.start_schedule()
