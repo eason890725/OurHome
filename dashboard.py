@@ -165,7 +165,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         .listings-grid {
-            display grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px;
         }
 
         .house-card {
@@ -679,7 +679,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             except Exception as e:
                 self.send_response(400)
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": str(e)}), encode('utf-8'))
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
         elif self.path == "/api/sync_ratings":
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)

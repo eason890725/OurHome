@@ -5,8 +5,8 @@
 
 from config import TARGET_URLS
 
-# 雙人同住白名單行政區 (預設安全校驗)
-ALLOWED_SECTIONS = ["大安區", "中山區", "信義區", "松山區", "南港區"]
+# 行政區白名單 (設為空列表，表示完全遵循目標搜尋網址所設定的所有行政區，避免跨區合法物件被誤刪)
+ALLOWED_SECTIONS = []
 
 RENT_MIN = 10000
 RENT_MAX = 30000

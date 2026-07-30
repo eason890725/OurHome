@@ -127,6 +127,7 @@ class RentalScraper:
 
         try:
             resp = requests.get(url, headers=headers, timeout=5)
+            resp.encoding = 'utf-8'  # 強制使用 UTF-8 解碼，避免中文亂碼
             if resp.status_code in [404, 410]:
                 is_off_market = True
             elif resp.status_code == 200:

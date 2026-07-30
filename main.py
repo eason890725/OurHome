@@ -27,8 +27,9 @@ logger = logging.getLogger("MainScheduler")
 def auto_git_pull():
     """自動從 GitHub 拉取 Render 雲端同步的最新資料庫與評價紀錄"""
     try:
+        subprocess.run(["git", "checkout", "rentals_backup.json"], capture_output=True, text=True, timeout=5)
         res = subprocess.run(["git", "pull", "origin", "main"], capture_output=True, text=True, timeout=10)
-        if "Already up to date" not in res.stdout:
+        if "Already up to date" not in res.stdout and res.returncode == 0:
             logger.info(f"🔄 [自動 GitHub 雙向同步] 已拉取雲端最新資料: {res.stdout.strip()}")
     except Exception as e:
         logger.debug(f"自動 git pull 提示: {e}")
