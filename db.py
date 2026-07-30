@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 def sanitize_text(text: str) -> str:
     if not text:
         return ""
-    # 清除不可見的 ASCII 控制字元 (防止 JSON 語法解析錯誤)
     return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', str(text))
 
 def parse_numeric_price(price_str: str) -> int:
@@ -67,6 +66,8 @@ class HousingDB:
                     price_history TEXT,
                     details_text TEXT,
                     user_rating TEXT DEFAULT 'none',
+                    status TEXT DEFAULT 'active',
+                    missing_count INTEGER DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -84,6 +85,10 @@ class HousingDB:
                 cursor.execute("ALTER TABLE houses ADD COLUMN details_text TEXT")
             if "user_rating" not in columns:
                 cursor.execute("ALTER TABLE houses ADD COLUMN user_rating TEXT DEFAULT 'none'")
+            if "status" not in columns:
+                cursor.execute("ALTER TABLE houses ADD COLUMN status TEXT DEFAULT 'active'")
+            if "missing_count" not in columns:
+                cursor.execute("ALTER TABLE houses ADD COLUMN missing_count INTEGER DEFAULT 0")
             if "updated_at" not in columns:
                 cursor.execute("ALTER TABLE houses ADD COLUMN updated_at TIMESTAMP")
                 
@@ -92,7 +97,7 @@ class HousingDB:
         self.restore_from_backup_json()
 
     def sync_backup_json(self):
-        """原子寫入 (Atomic Write) 將 SQLite 中的所有資料同步匯出至 rentals_backup.json，防止併發毀損"""
+        """原子寫入 (Atomic Write) 將 SQLite 中的所有資料同步匯出至 rentals_backup.json"""
         houses = self.get_all_houses()
         if not houses:
             return
@@ -105,7 +110,7 @@ class HousingDB:
             logger.debug(f"同步 rentals_backup.json 失敗: {e}")
 
     def restore_from_backup_json(self):
-        """當資料庫為空時（如 Render 重設硬碟），自動清理控制字元並從 rentals_backup.json 還原"""
+        """當資料庫為空時（如 Render 重設硬碟），自動從 rentals_backup.json 還原"""
         if not os.path.exists("rentals_backup.json"):
             return
         try:
@@ -133,8 +138,8 @@ class HousingDB:
                             history_str = str(history_val)
 
                         cursor.execute("""
-                            INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, user_rating, created_at, updated_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, user_rating, status, missing_count, created_at, updated_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, (
                             house_id,
                             sanitize_text(h.get("title", "")),
@@ -147,6 +152,8 @@ class HousingDB:
                             history_str,
                             sanitize_text(h.get("details_text", "")),
                             h.get("user_rating", "none"),
+                            h.get("status", "active"),
+                            h.get("missing_count", 0),
                             h.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
                             h.get("updated_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         ))
@@ -257,8 +264,8 @@ class HousingDB:
                 ], ensure_ascii=False)
 
                 cursor.execute("""
-                    INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, user_rating, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, user_rating, status, missing_count, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     house_id,
                     title,
@@ -271,6 +278,8 @@ class HousingDB:
                     initial_history,
                     details_text,
                     'none',
+                    'active',
+                    0,
                     now_str,
                     now_str
                 ))
@@ -293,7 +302,7 @@ class HousingDB:
 
                     cursor.execute("""
                         UPDATE houses 
-                        SET price = ?, numeric_price = ?, price_history = ?, details_text = ?, updated_at = ?
+                        SET price = ?, numeric_price = ?, price_history = ?, details_text = ?, status = 'active', missing_count = 0, updated_at = ?
                         WHERE house_id = ?
                     """, (
                         current_price_str,
@@ -319,6 +328,9 @@ class HousingDB:
                         "house": updated_house
                     }
                 else:
+                    # 重新出現在爬蟲結果中，恢復 active 狀態
+                    cursor.execute("UPDATE houses SET status = 'active', missing_count = 0, updated_at = ? WHERE house_id = ?", (now_str, house_id))
+                    conn.commit()
                     return {"action": "IGNORE"}
 
     def process_houses_batch(self, houses_list: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
@@ -326,6 +338,8 @@ class HousingDB:
             "new_houses": [],
             "price_drop_houses": []
         }
+        active_ids = {str(h.get("house_id")) for h in houses_list if h.get("house_id")}
+
         for house in houses_list:
             res = self.process_house(house)
             if res["action"] == "NEW":
@@ -333,6 +347,25 @@ class HousingDB:
             elif res["action"] == "PRICE_DROP":
                 results["price_drop_houses"].append(res["house"])
         
+        # 檢測已出租 / 已下架物件 (連續未在 591 搜尋清單中出現)
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT house_id, missing_count, status FROM houses")
+            all_rows = cursor.fetchall()
+            for row in all_rows:
+                hid = str(row["house_id"])
+                curr_missing = row["missing_count"] or 0
+                if hid in active_ids:
+                    cursor.execute("UPDATE houses SET missing_count = 0, status = 'active' WHERE house_id = ?", (hid,))
+                else:
+                    new_missing = curr_missing + 1
+                    # 當連續 2 次巡邏皆未出現在 591 清單中，判定為已下架/已出租
+                    new_status = 'off_market' if new_missing >= 2 else row["status"]
+                    if new_status == 'off_market' and row["status"] != 'off_market':
+                        logger.info(f"🏚️ 辨識出已下架/已出租房源: [{hid}]")
+                    cursor.execute("UPDATE houses SET missing_count = ?, status = ? WHERE house_id = ?", (new_missing, new_status, hid))
+            conn.commit()
+
         self.sync_backup_json()
         return results
 
