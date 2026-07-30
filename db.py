@@ -3,11 +3,16 @@ import re
 import os
 import sqlite3
 import logging
+import base64
+import requests
 from datetime import datetime
 from difflib import SequenceMatcher
 from typing import Optional, Dict, List, Tuple, Any
 
 logger = logging.getLogger(__name__)
+
+GITHUB_REPO = "eason890725/OurHome"
+GITHUB_FILE_PATH = "rentals_backup.json"
 
 def sanitize_text(text: str) -> str:
     if not text:
@@ -103,17 +108,56 @@ class HousingDB:
         self.restore_from_backup_json()
 
     def sync_backup_json(self):
-        """原子寫入 (Atomic Write) 將 SQLite 中的所有資料同步匯出至 rentals_backup.json"""
+        """原子寫入 (Atomic Write) 並透由 GitHub API 將 Render 雲端最新 DB 雙向寫回 GitHub"""
         houses = self.get_all_houses()
         if not houses:
             return
         try:
+            json_bytes = json.dumps(houses, ensure_ascii=False, indent=2).encode("utf-8")
             tmp_file = "rentals_backup.json.tmp"
-            with open(tmp_file, "w", encoding="utf-8") as f:
-                json.dump(houses, f, ensure_ascii=False, indent=2)
+            with open(tmp_file, "wb") as f:
+                f.write(json_bytes)
             os.replace(tmp_file, "rentals_backup.json")
+            
+            # 若設置了 GITHUB_TOKEN，透由 GitHub API 全自動雙向同步
+            token = os.environ.get("GITHUB_TOKEN")
+            if token:
+                self._push_to_github_api(token, json_bytes)
+
         except Exception as e:
             logger.debug(f"同步 rentals_backup.json 失敗: {e}")
+
+    def _push_to_github_api(self, token: str, json_bytes: bytes):
+        """透由 GitHub REST API 自動 Commit 並 Push 最新備份至 GitHub 儲存庫"""
+        try:
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
+            headers = {
+                "Authorization": f"token {token}",
+                "Accept": "application/vnd.github.v3+json"
+            }
+            
+            sha = ""
+            get_resp = requests.get(url, headers=headers, timeout=5)
+            if get_resp.status_code == 200:
+                sha = get_resp.json().get("sha", "")
+
+            content_b64 = base64.b64encode(json_bytes).decode("utf-8")
+            payload = {
+                "message": f"data: auto-sync rentals_backup.json ({len(json.loads(json_bytes.decode('utf-8')))} items) from Render cloud",
+                "content": content_b64,
+                "branch": "main"
+            }
+            if sha:
+                payload["sha"] = sha
+
+            put_resp = requests.put(url, headers=headers, json=payload, timeout=8)
+            if put_resp.status_code in (200, 201):
+                logger.info(f"✨ [GitHub API 雙向全自動同步成功] 已把 Render 最新 {len(json.loads(json_bytes.decode('utf-8')))} 筆 DB 寫回 GitHub！")
+            else:
+                logger.debug(f"GitHub API 同步提示: {put_resp.status_code} - {put_resp.text}")
+
+        except Exception as e:
+            logger.debug(f"GitHub API 雙向同步異常: {e}")
 
     def restore_from_backup_json(self):
         """當資料庫為空時（如 Render 重設硬碟），自動從 rentals_backup.json 還原"""

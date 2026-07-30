@@ -2,6 +2,7 @@ import time
 import logging
 import random
 import threading
+import subprocess
 import schedule
 from dotenv import load_dotenv
 
@@ -23,8 +24,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger("MainScheduler")
 
+def auto_git_pull():
+    """自動從 GitHub 拉取 Render 雲端同步的最新資料庫與評價紀錄"""
+    try:
+        res = subprocess.run(["git", "pull", "origin", "main"], capture_output=True, text=True, timeout=10)
+        if "Already up to date" not in res.stdout:
+            logger.info(f"🔄 [自動 GitHub 雙向同步] 已拉取雲端最新資料: {res.stdout.strip()}")
+    except Exception as e:
+        logger.debug(f"自動 git pull 提示: {e}")
+
 class HousingMonitorApp:
     def __init__(self):
+        auto_git_pull()
         self.db = HousingDB(DB_PATH)
         self.notifier = DiscordNotifier(DISCORD_WEBHOOK_URL)
         self.scraper = RentalScraper()
@@ -32,6 +43,7 @@ class HousingMonitorApp:
     def check_new_listings(self):
         """核心監控任務：多網址爬取 -> 關鍵字/坪數過濾 -> 特徵碼/地址雙重去重 -> 費用估算 -> Discord 通知"""
         logger.info("=== 開始執行 591 租屋網巡邏 (智慧地址去重與雙人同住模式) ===")
+        auto_git_pull()
         try:
             # 1. 多網址抓取與初步關鍵字/坪數過濾
             fetched_houses = self.scraper.run()
@@ -77,14 +89,12 @@ class HousingMonitorApp:
 
     def start_schedule(self, interval_minutes: int = CHECK_INTERVAL_MINUTES):
         """啟動 Web Dashboard 與定時排程迴圈"""
-        # 啟動 Web Dashboard 服務 (Daemon Thread)
         dashboard_thread = threading.Thread(target=run_dashboard_server, args=(PORT,), daemon=True)
         dashboard_thread.start()
         logger.info(f"🌐 Web 租屋儀表板已於背景啟動：http://localhost:{PORT}")
 
         logger.info(f"啟動 OurHome 租屋監控排程，設定每 {interval_minutes} 分鐘檢查一次...")
         
-        # 首次立即執行
         self.check_new_listings()
 
         schedule.every(interval_minutes).minutes.do(self._scheduled_task)
@@ -100,6 +110,6 @@ class HousingMonitorApp:
             time.sleep(jitter_seconds)
         self.check_new_listings()
 
-if __name__ == "__main__":
-    app = HousingMonitorApp()
-    app.start_schedule()
+    if __name__ == "__main__":
+        app = HousingMonitorApp()
+        app.start_schedule()
