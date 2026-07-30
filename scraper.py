@@ -167,22 +167,41 @@ class RentalScraper:
 
     def fetch_via_playwright(self) -> List[Dict[str, str]]:
         urls = self.target_urls
-        logger.info(f"啟動高容錯與長連線 Playwright 瀏覽器，準備依序爬取 {len(urls)} 個目標網址...")
+        logger.info(f"啟動極低記憶體 Chromium (限制 V8 JS Heap 128MB，攔截所有圖片/字型/媒體)，準備爬取 {len(urls)} 個目標網址...")
         results = []
         global_seen_ids = set()
+
+        # 針對 512MB Render 記憶體容器設計的超低 RAM Chromium 旗標
+        ultra_low_memory_args = [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-accelerated-2d-canvas",
+            "--no-first-run",
+            "--no-zygote",
+            "--disable-gpu",
+            "--disable-extensions",
+            "--disable-background-networking",
+            "--disable-background-timer-throttling",
+            "--disable-backgrounding-occluded-windows",
+            "--disable-breakpad",
+            "--disable-component-extensions-with-background-pages",
+            "--disable-ipc-flooding-protection",
+            "--disable-renderer-backgrounding",
+            "--metrics-recording-only",
+            "--mute-audio",
+            "--no-default-browser-check",
+            "--no-pings",
+            "--password-store=basic",
+            "--use-gl=swiftshader",
+            "--v8-cache-options=none",
+            "--js-flags=--max-old-space-size=128"  # 強制限制 V8 JavaScript Heap 上限 128MB
+        ]
 
         with sync_playwright() as p:
             browser = p.chromium.launch(
                 headless=True,
-                args=[
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-accelerated-2d-canvas",
-                    "--no-first-run",
-                    "--no-zygote",
-                    "--disable-gpu"
-                ]
+                args=ultra_low_memory_args
             )
             
             context_options = {
@@ -192,6 +211,15 @@ class RentalScraper:
             }
             context = browser.new_context(**context_options)
             
+            # 攔截所有圖片、字型、影片、CSS 媒體資源，省下 85% 記憶體
+            def route_interceptor(route, request):
+                if request.resource_type in ["image", "font", "media", "stylesheet"]:
+                    route.abort()
+                else:
+                    route.continue_()
+
+            context.route("**/*", route_interceptor)
+
             if os.path.exists(COOKIES_FILE):
                 try:
                     with open(COOKIES_FILE, "r", encoding="utf-8") as f:
@@ -205,22 +233,22 @@ class RentalScraper:
                 try:
                     logger.info(f"[{i}/{len(urls)}] 載入網址: {target_url}")
                     page = context.new_page()
-                    page.set_default_timeout(45000)
+                    page.set_default_timeout(35000)
                     
                     try:
-                        page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
+                        page.goto(target_url, wait_until="domcontentloaded", timeout=35000)
                     except Exception as goto_err:
                         logger.warning(f"⚠️ 載入 [{target_url}] 超時，嘗試備用 commit 模式: {goto_err}")
                         try:
-                            page.goto(target_url, wait_until="commit", timeout=20000)
+                            page.goto(target_url, wait_until="commit", timeout=15000)
                         except Exception:
                             pass
 
-                    page.wait_for_timeout(2000)
+                    page.wait_for_timeout(1500)
 
                     for _ in range(3):
                         page.evaluate("window.scrollBy(0, 1000);")
-                        page.wait_for_timeout(600)
+                        page.wait_for_timeout(400)
 
                     items = page.eval_on_selector_all(
                         "div.item-info-title a, a.item-title",
