@@ -14,7 +14,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 01:22:20",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21729155",
@@ -31,7 +31,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:20",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21622254",
@@ -48,7 +48,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:20",
-    "updated_at": "2026-07-31 01:24:52"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21695632",
@@ -65,7 +65,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:20",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21582587",
@@ -82,7 +82,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:20",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21687074",
@@ -99,7 +99,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:20",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21673911",
@@ -116,7 +116,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:20",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21711493",
@@ -133,7 +133,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:20",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21653971",
@@ -150,7 +150,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:20",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21695704",
@@ -167,7 +167,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:20",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21611413",
@@ -184,7 +184,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:20",
-    "updated_at": "2026-07-31 01:24:50"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21566583",
@@ -201,7 +201,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:20",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21663976",
@@ -218,7 +218,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:19",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:21"
   },
   {
     "house_id": "21669162",
@@ -235,7 +235,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:19",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21702631",
@@ -252,7 +252,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:19",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21651177",
@@ -269,7 +269,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:19",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21643367",
@@ -286,7 +286,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:19",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21708683",
@@ -299,11 +299,11 @@
     "address_fingerprint": "中正區信義路二段65號_10.0坪",
     "price_history": "[{\"price\": \"24,000元/月\", \"numeric\": 24000, \"time\": \"2026-07-31 00:35:19\"}]",
     "details_text": "獨家出租!東門捷運站全天候保全管理天然瓦斯優選好屋\n影片賞屋近捷運新上架 拎包入住有電梯隨時可遷入\n獨立套房樓中樓\n10坪\n7F/12F\n中正歐堡\n中正區-信義路二段65號\n距東門264公尺\n仲介洪先生2小時內更新昨日67人瀏覽\n24,000\n元/月\n\n(額外費用 1,340元/月) 獨家出租!東門捷運站全天候保全管理天然瓦斯 - 591租屋網                                  [{\"@context\":\"https://schema.org\",\"@type\":\"BreadcrumbList\",\"name\":\"獨家出租!東門捷運站全天候保全管理天然瓦斯\",\"itemListElement\":[{\"@type\":\"ListItem\",\"position\":1,\"name\":\"591首頁\",\"item\":\"https://www.591.com.tw\"},{\"@type\":\"ListItem\",\"position\":2,\"name\":\"租屋\",\"item\":\"https://rent.591.com.tw/list\"},{\"@type\":\"ListItem\",\"position\":3,\"name\":\"獨家出租!東門捷運站全天候保全管理天然瓦斯 - 月租24,000元/月\",\"item\":\"https://rent.591.com.tw/21708683\"}]},{\"@context\":\"https://schema.org\",\"@type\":\"Product\",\"name\":\"獨家出租!東門捷運站全天候保全管理天然瓦斯\",\"description\":\"台北市中正區獨立套房出租：租金?元/月，面積?坪，位於信義路二段65號，更多出租詳情，就上591租屋網！\",\"url\":\"https://rent.591.com.tw/21708683\",\"image\":[\"https://img1.591.com.tw/video/cover/2026-06-30/3146346.png!1000x.water2.png\",\"https://img2.591.com.tw/house/2026/06/30/178280986163103805.jpg!1000x.water2.jpg\",\"https://img1.591.com.tw/house/2026/06/30/178280986154947307.jpg!1000x.water2.jpg\",\"https://img1.591.com.tw/house/2026/06/30/178280986159297204.jpg!1000x.water2.jpg\",\"https://img1.591.com.tw/house/2026/06/30/178280986152518603.jpg!1000x.water2.jpg\",\"https://img1.591.com.tw/house/2026/06/30/178280986170629508.jpg!1000x.water2.jpg\",\"https://img2.591.com.tw/house/2026/06/30/178280986165180908.jpg!1000x.water2.jpg\",\"https://img1.591.com.tw/house/2026/06/30/178280986180513509.jpg!1000x.water2.jpg\",\"https://img2.591.com.tw/house/2026/06/30/178280986190982002.jpg!1000x.water2.jpg\",\"https://img2.591.com.tw/house/2026/06/30/178280986186560701.jpg!1000x.water2.jpg\",\"https://img2.591.com.tw/house/2026/06/30/178280986190983608.jpg!1000x.water2.jpg\",\"https://img2.591.com.tw/house/2026/06/30/178280986198338105.jpg!1000x.water2.jpg\",\"https://img2.591.com.tw/house/2026/06/30/178280986197894307.jpg!1000x.water2.jpg\",\"https://img1.591.com.tw/house/2026/06/30/178280986207684002.jpg!1000x.water2.jpg\",\"https://img2.591.com.tw/house/2026/06/30/178280987369405900.jpg!1000x.water2.jpg\",\"https://img1.591.com.tw/house/2026/06/30/178280987895214901.jpg!1000x.water2.jpg\"],\"offers\":{\"@type\":\"Offer\",\"price\":\"24000\",\"priceCurrency\":\"TWD\",\"availability\":\"https://schema.org/InStock\",\"url\":\"https://rent.591.com.tw/21708683\",\"priceValidUntil\":\"2026-08-30\"},\"aggregateRating\":{\"@type\":\"AggregateRating\",\"ratingValue\":\"0\",\"reviewCount\":\"0\",\"bestRating\":\"5\",\"worstRating\":\"1\"},\"review\":[{\"@type\":\"Review\",\"author\":{\"@type\":\"Organization\",\"name\":\"591房屋交易\"},\"reviewBody\":\"此房源尚無用戶評價\",\"reviewRating\":{\"@type\":\"Rating\",\"ratingValue\":\"0\",\"bestRating\":\"5\",\"worstRating\":\"1\"}}]}] 首頁     新建案       銷售中新建案       所有新建案    預售屋    最新公開銷售    新成屋    捷運宅    高檔住宅         建築/代銷公司    與其他網路平臺相比，591擁有更多精準的買屋人群，現在加入即可免費獲取看屋人潮喔！     立即免費刊登新建案      十大建案熱銷秘笈      了解列表頁排序方案       買房工具       最新房貸利率    房貸試算器    實價登錄    環景720專區         裝修服務           領取報價清單  已超過10萬人領取    領取報價清單  已超過10萬人領取       瀏覽海量圖庫  查看實用攻略              中古屋        待售中古屋       所有物件    地圖找房    屋主物件    降價物件    急售物件    必看好屋    法拍屋      屋主委賣         買房工具       最新房貸利率    房貸試算器    實價登錄    找經紀人         經紀人    推薦！ 仲介用戶購買售屋套餐，單筆最低至240元！    立即刊登出售廣告    瞭解售屋套餐方案      裝修服務           領取報價清單  已超過10萬人領取    領取報價清單  已超過10萬人領取       瀏覽海量圖庫  查看實用攻略             租屋         待租物件       所有物件    房東出租    整層住家    地圖找房    獨立套房    捷運找房    分租套房    學校找房    雅房      屋主委租         租屋工具       租屋手冊    契約下載    找經紀人         房東/代理人    使用過591房東們的共同見證，最快3天就成交！  不要錯過你儘早收租好機會喔！    立即刊登出租廣告    查看收費說明           土地           所有物件    土地出售  土地出租       地圖找地    定位每筆土地 可視化看現場與周邊           立即前往        地圖查實價    與內政部同步更新 全台完整土地實價信息           立即前往            店面          出租       店面出租    店面頂讓         出售       店面出售              辦公          出租       辦公    住辦         出售       辦公    住辦              廠房          出租       廠房         出售       廠房              社區找房     室內設計     新聞          登入        註冊        我要刊登          刊登出租  刊登出售  刊登建案  圖片廣告  收費標準               幫助            查看更多幫助內容               數字App                          台北市        中正區        獨立套房        R21708683          昨日瀏覽    67    54    13           列印          分享           收藏 (15)                              分享           收藏 (15)                                                                            查看全部16張照片                  優選好屋  獨家出租!東門捷運站全天候保全管理天然瓦斯      影片賞屋  近捷運  新上架  拎包入住  有電梯  隨時可遷入  可開伙       獨立套房      10坪              7F/12F        電梯大樓        24,000  元/月  二個月             另有額外費用1340元/月  總支出試算              位置與周邊      地  址:   中正區信義路二段65號     所屬社區:  中正歐堡            交通      距 東門站   264 公尺          距 捷運東門站(信義)   86 公尺       距 信義杭州路口站   162 公尺            生活      距 愛國東路婚紗攝影街   678 公尺          距 富記食品   23 公尺      附近有20家購物中心，20家餐廳          教育      距 臺北市私立金甌女子高級中學   214 公尺          距 臺北市大安區金華國民小學   316 公尺      附近有12所國小，8所國中，1所大學                      租住與設備         租住說明      最短租期  一年    身份要求  學生、上班族、家庭    可遷入日  可隨時遷入    性別  此房屋男女皆可租住    養寵物  不可養寵物    開伙  可開伙            提供設備/家具            冰箱        洗衣機        電視        冷氣        熱水器        床        衣櫃        第四台        網路        天然瓦斯        沙發        桌椅        陽台        電梯        車位              優選理由    產權有保障  已在地政局辦理建物產權登記，選擇更安心    拎包入住  滿足90%的日常所需設備，享輕鬆入住體驗    7日上新  4天前發佈，租到概率高            屋況介紹                  仲介: 洪先生   (收服務費)                   經紀業: 喬鉅不動產仲介經紀有限公司           LINE聯絡         打電話            打電話                《2026年最新優惠⽅案》     獨家!!!!!稀有物件     即日起可以預約看屋喔!       位置可以約GOOGLE信義路二段65號&nbsp;中正歐堡社區      走路到東門站2號出口慢慢走約2分鐘就到    東門  市場漫步約1分鐘可以到      台水&nbsp;台電&nbsp;大台北瓦斯帳單&nbsp;全天候管理員&nbsp;垃圾專人處理    本案為挑高3米6&nbsp;增建臥室&nbsp;使用空間大&nbsp;另有客廳及書房空間    原租金26500元   租期一年優惠為25000元  (另管理費1340元)   租期二年優惠為24000元  (另管理費1340元)        看屋免費&nbsp;成交酌收半個月服務費&nbsp; 東門&nbsp;永康商圈生活機能超優      請勿用５９１問題詢問，訊息完全看不到喔      地址:中正區信義路二段65號      即⽇起可以預約看屋超搶⼿      獨立門牌&nbsp;水、電&nbsp;天然瓦斯都是照帳單支付      現況有變頻空調&nbsp;衣櫃&nbsp;&nbsp;洗衣機&nbsp;熱水器&nbsp;冰箱&nbsp;智慧電視&nbsp;沙發      垃圾專人處理&nbsp;免專用垃圾袋     房客嚴選!非常感謝限正職(需出⽰公司名片或是在職證明)      聯絡電話０９１９９５９９９５洪先⽣      （LINEID：０９１９９５９９９５ａ)   附近有便利商店、傳統市場、公園綠地、學校。 本房屋近東門捷運站2號出口捷運站。              房屋詳情         基礎資料        產權登記     房屋已辦產權登記      法定用途    商業用          可使用面積    10坪      建物面積    6.00坪 (不含公設)          權狀坪數    10.33坪      屋齡    28年          電梯    有      裝潢程度    中檔裝潢          裝潢時間    三年以上      特殊房型    樓中樓          其他特色    影片賞屋、近捷運、新上架、拎包入住、有電梯、隨時可遷入、可開伙              房屋價格  總支出試算&gt;        租金    24,000元/月     押金    二個月         服務費    收取服務費     管理費    1,340元/月                                                  仲介: 洪先生   (收服務費)                   經紀業: 喬鉅不動產仲介經紀有限公司    詳情                            0919-959-995                        0919-959-995                         LINE聯絡  視訊看屋更方便          固話              此房屋在4天前發佈   (2小時內更新)        591提醒您：刊登者以不方便看房、物件搶手為由， 要求先付訂金的是詐騙!      檢舉此房屋                          投資者專區    關於我們    廣告刊登    新聞剪輯    社會公益    免責聲明    服務條款    隱私權聲明    數字徵才        591租屋    591新建案    591土地    591新聞    591實價登錄    591高檔住宅    100室內設計    台灣8591寶物交易網    香港8591寶物交易網        8891新車    8891中古車    518熊班    出任務    小雞上工    找師傅    好日子驗屋      Copyright © 2007-2026 by Addcn Technology Co., Ltd. All Rights reserved.        物件訊息未完全展示?   登錄 後即可查看完整資訊               window.__NUXT__=(function(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,_,$,aa,ab,ac,ad,ae,af,ag,ah,ai,aj,ak,al,am,an,ao,ap,aq,ar,as,at,au,av,aw,ax,ay,az,aA,aB,aC,aD,aE,aF,aG,aH,aI,aJ,aK,aL,aM,aN,aO,aP,aQ,aR,aS,aT,aU,aV,aW,aX,aY,aZ,a_,a$,ba,bb,bc,bd,be,bf,bg,bh,bi,bj,bk,bl,bm,bn,bo,bp,bq,br,bs,bt,bu,bv,bw,bx,by,bz,bA,bB,bC,bD,bE,bF,bG,bH,bI,bJ,bK,bL,bM,bN,bO,bP,bQ,bR,bS,bT,bU,bV,bW,bX,bY,bZ,b_,b$,ca,cb,cc,cd,ce,cf,cg,ch,ci,cj,ck,cl,cm,cn,co,cp,cq,cr,cs,ct,cu,cv,cw,cx,cy,cz,cA,cB,cC,cD,cE,cF,cG,cH,cI,cJ,cK,cL,cM,cN,cO,cP,cQ,cR,cS,cT,cU,cV,cW,cX,cY,cZ,c_,c$,da,db,dc,dd,de,df,dg,dh,di,dj,dk,dl,dm,dn,do0,dp,dq,dr,ds,dt,du,dv,dw,dx,dy,dz,dA,dB,dC,dD,dE,dF,dG,dH,dI,dJ,dK,dL,dM,dN,dO,dP,dQ,dR,dS,dT,dU,dV,dW,dX,dY,dZ,d_,d$,ea,eb,ec,ed,ee,ef,eg,eh,ei,ej,ek,el,em,en,eo,ep,eq,er,es,et,eu,ev,ew,ex,ey,ez,eA,eB,eC,eD,eE,eF,eG,eH,eI,eJ,eK,eL,eM,eN,eO,eP,eQ,eR,eS,eT,eU,eV,eW,eX,eY,eZ,e_,e$,fa,fb,fc,fd,fe,ff,fg,fh,fi,fj,fk,fl,fm,fn,fo,fp,fq,fr,fs,ft,fu,fv,fw,fx,fy,fz,fA,fB,fC,fD,fE,fF,fG,fH,fI,fJ,fK,fL,fM,fN,fO,fP,fQ,fR,fS,fT,fU,fV,fW,fX,fY,fZ,f_,f$,ga,gb,gc,gd,ge,gf,gg,gh,gi,gj,gk,gl,gm,gn,go,gp,gq,gr,gs,gt,gu,gv,gw,gx,gy,gz,gA,gB,gC,gD,gE,gF,gG,gH,gI,gJ,gK,gL,gM,gN,gO,gP,gQ,gR,gS,gT,gU,gV,gW,gX,gY,gZ,g_,g$,ha,hb,hc,hd,he,hf,hg,hh,hi,hj,hk,hl,hm,hn,ho,hp,hq,hr,hs,ht,hu,hv,hw,hx,hy,hz,hA,hB,hC,hD,hE,hF,hG,hH,hI,hJ,hK,hL,hM,hN,hO,hP,hQ,hR,hS,hT,hU,hV,hW,hX,hY,hZ,h_,h$,ia,ib,ic,id,ie,if0,ig,ih,ii,ij,ik,il,im,in0,io,ip,iq,ir,is,it,iu,iv,iw,ix,iy,iz,iA,iB,iC,iD,iE,iF,iG,iH,iI,iJ,iK,iL,iM,iN,iO,iP,iQ,iR,iS,iT,iU,iV,iW,iX,iY,iZ,i_,i$,ja,jb,jc,jd,je,jf,jg,jh,ji,jj,jk,jl,jm,jn,jo,jp,jq,jr,js,jt,ju,jv,jw,jx,jy,jz,jA,jB,jC,jD,jE,jF,jG,jH,jI,jJ,jK,jL,jM,jN,jO,jP,jQ,jR,jS,jT,jU,jV,jW,jX,jY,jZ,j_,j$,ka,kb,kc,kd,ke,kf,kg,kh,ki,kj,kk,kl,km,kn,ko,kp,kq,kr,ks,kt,ku,kv,kw,kx,ky,kz,kA,kB,kC,kD,kE,kF,kG,kH,kI,kJ,kK,kL,kM,kN,kO,kP,kQ,kR,kS,kT,kU,kV,kW,kX,kY,kZ,k_,k$,la,lb,lc,ld,le,lf,lg,lh,li,lj){aV.ai_video_use=a;aV.ai_video_recommend_flag=a;aV.local_video_file_id=q;aV.ai_video_file_id=a;aV.link_video_id=a;return {data:{$fxBcfsYHriCW4VuV_xwtviZAtBswICjZMoTaBtdx4jjY:{status:a,msg:\"no login\",data:{}},$fg7f3nKSX2zhf13u8YBwRzw0UzGDwAzLs8HIEfwMcxs4:{status:c,data:{tags:[{key:F,name:aW,type:h,count:c},{key:i,name:aX,type:d,count:G}],items:[{key:F,type:h,photo:m,thumbPhoto:m,origPhoto:m,note:b,source:d,url:H,videoPlayCount:a,file_id:q,normal:{id:aY,is_video:c,video_type:d,source:d,video_rel_id:aZ,cust_video_cover:b,file_id:q,video_url:H,video_pic:m,cover:m,video_play_count:a},ai:[]},{key:i,photoId:a_,photo:a$,origPhoto:ba,thumbPhoto:I,isCover:c,purpose:a,note:b,type:d},{key:i,photoId:bb,photo:bc,origPhoto:bd,thumbPhoto:be,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bf,photo:bg,origPhoto:bh,thumbPhoto:bi,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bj,photo:bk,origPhoto:bl,thumbPhoto:bm,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bn,photo:bo,origPhoto:bp,thumbPhoto:bq,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:br,photo:bs,origPhoto:bt,thumbPhoto:bu,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bv,photo:bw,origPhoto:bx,thumbPhoto:by,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bz,photo:bA,origPhoto:bB,thumbPhoto:bC,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bD,photo:bE,origPhoto:bF,thumbPhoto:bG,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bH,photo:bI,origPhoto:bJ,thumbPhoto:bK,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bL,photo:bM,origPhoto:bN,thumbPhoto:bO,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bP,photo:bQ,origPhoto:bR,thumbPhoto:bS,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bT,photo:bU,origPhoto:bV,thumbPhoto:bW,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bX,photo:bY,origPhoto:bZ,thumbPhoto:b_,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:b$,photo:ca,origPhoto:cb,thumbPhoto:cc,isCover:a,purpose:a,note:b,type:d}],purposes:[],extra:{thumb:I,video_ga:{ai_video_use:a,ai_video_recommend_flag:a,local_video_file_id:q,ai_video_file_id:a,link_video_id:a}}},msg:b},$fONAKn61W74GK0nCvSiFjpjbB6pT87GrCLjpH_qwYswA:{status:c,msg:b,data:{breadcrumb:[{name:J,id:c,query:cd,link:\"\\u002F?region=1\"},{name:K,id:c,query:ce,link:\"\\u002F?region=1&section=1\"},{name:n,id:h,query:L,link:\"\\u002F?region=1&section=1&kind=2\"}],title:r,status:cf,deposit:M,kind:h,relieved:a,regionId:c,sectionId:c,shareInfo:{url:cg,from:ch,title:ci},dealText:b,dealTime:a,endTime:cj,browse:{pc:s,mobile:N},tags:[{id:ck,value:cl},{id:h,value:cm},{id:cn,value:co},{id:d,value:O},{id:t,value:cp},{id:u,value:cq},{id:cr,value:P}],price:v,priceUnit:w,navData:[{title:Q,key:R,active:c},{title:S,key:T,active:c},{title:U,key:V,active:c},{title:W,key:X,active:c},{title:cs,key:ct,active:c},{title:Y,key:Z,active:c}],priceCacheTxt:b,priceCache:[],info:[{name:cu,value:n,key:L},{name:cv,value:_,key:$},{name:cw,value:cx,key:cy},{name:cz,value:x,key:cA}],publish:{id:h,name:cB,key:cC,postTime:cD,updateTime:cE},rooms:{title:cF,key:cG,active:a,data:[]},positionRound:{title:Q,key:R,active:c,communityName:aa,communityId:ab,address:ac,lat:cH,lng:cI,data:[{name:ad,key:ae,children:[{type:af,name:y,distance:z,distanceTxt:cJ},{type:A,name:ag,distance:ah,distanceTxt:cK},{type:A,name:ai,distance:aj,distanceTxt:cL}]},{name:ak,key:al,children:[{type:am,name:an,distance:ao,distanceTxt:cM},{type:e,name:ap,distance:aq,distanceTxt:cN},{type:b,name:b,distance:a,distanceTxt:cO}]},{name:ar,key:as,children:[{type:at,name:au,distance:B,distanceTxt:cP},{type:av,name:aw,distance:ax,distanceTxt:cQ},{type:b,name:b,distance:a,distanceTxt:cR}]}],mapData:[{name:ad,key:ae,children:[{name:cS,key:af,children:[{name:y,type:cT,lat:ay,lng:az,distance:z,trading_area_id:a,trading_area_distance:a}]},{name:cU,key:A,children:[{name:ag,type:f,lat:cV,lng:cW,distance:ah,trading_area_id:a,trading_area_distance:a},{name:ai,type:f,lat:cX,lng:cY,distance:aj,trading_area_id:a,trading_area_distance:a},{name:cZ,type:f,lat:c_,lng:c$,distance:da,trading_area_id:a,trading_area_distance:a},{name:db,type:f,lat:dc,lng:dd,distance:B,trading_area_id:l,trading_area_distance:de},{name:df,type:f,lat:dg,lng:dh,distance:di,trading_area_id:a,trading_area_distance:a},{name:y,type:f,lat:ay,lng:az,distance:z,trading_area_id:a,trading_area_distance:a},{name:aA,type:f,lat:dj,lng:dk,distance:dl,trading_area_id:a,trading_area_distance:a},{name:aB,type:f,lat:dm,lng:dn,distance:do0,trading_area_id:a,trading_area_distance:a},{name:aB,type:f,lat:dp,lng:dq,distance:dr,trading_area_id:a,trading_area_distance:a},{name:ds,type:f,lat:dt,lng:du,distance:dv,trading_area_id:a,trading_area_distance:a},{name:aA,type:f,lat:dw,lng:dx,distance:dy,trading_area_id:a,trading_area_distance:a},{name:dz,type:f,lat:dA,lng:dB,distance:dC,trading_area_id:l,trading_area_distance:dD},{name:dE,type:f,lat:dF,lng:dG,distance:dH,trading_area_id:a,trading_area_distance:a},{name:dI,type:f,lat:dJ,lng:dK,distance:dL,trading_area_id:a,trading_area_distance:a},{name:dM,type:f,lat:dN,lng:dO,distance:dP,trading_area_id:l,trading_area_distance:dQ},{name:dR,type:f,lat:dS,lng:dT,distance:dU,trading_area_id:l,trading_area_distance:dV},{name:dW,type:f,lat:dX,lng:dY,distance:dZ,trading_area_id:d_,trading_area_distance:d$},{name:ea,type:f,lat:eb,lng:ec,distance:ed,trading_area_id:a,trading_area_distance:a},{name:ee,type:f,lat:ef,lng:eg,distance:eh,trading_area_id:a,trading_area_distance:a},{name:ei,type:f,lat:ej,lng:ek,distance:el,trading_area_id:a,trading_area_distance:a}]}]},{name:ak,key:al,children:[{name:em,key:am,children:[{name:en,type:g,lat:eo,lng:ep,distance:eq,trading_area_id:a,trading_area_distance:a},{name:er,type:g,lat:es,lng:et,distance:eu,trading_area_id:a,trading_area_distance:a},{name:ev,type:g,lat:ew,lng:ex,distance:ey,trading_area_id:a,trading_area_distance:a},{name:ez,type:g,lat:eA,lng:eB,distance:eC,trading_area_id:a,trading_area_distance:a},{name:eD,type:g,lat:eE,lng:eF,distance:eG,trading_area_id:a,trading_area_distance:a},{name:eH,type:g,lat:eI,lng:eJ,distance:eK,trading_area_id:a,trading_area_distance:a},{name:eL,type:g,lat:eM,lng:eN,distance:eO,trading_area_id:a,trading_area_distance:a},{name:an,type:g,lat:eP,lng:eQ,distance:ao,trading_area_id:l,trading_area_distance:aC},{name:eR,type:g,lat:eS,lng:eT,distance:eU,trading_area_id:o,trading_area_distance:eV},{name:eW,type:g,lat:eX,lng:eY,distance:eZ,trading_area_id:o,trading_area_distance:e_},{name:e$,type:g,lat:fa,lng:fb,distance:fc,trading_area_id:C,trading_area_distance:fd},{name:fe,type:g,lat:ff,lng:fg,distance:fh,trading_area_id:a,trading_area_distance:a},{name:fi,type:g,lat:fj,lng:fk,distance:fl,trading_area_id:C,trading_area_distance:fm},{name:fn,type:g,lat:fo,lng:fp,distance:fq,trading_area_id:a,trading_area_distance:a},{name:fr,type:g,lat:fs,lng:ft,distance:fu,trading_area_id:a,trading_area_distance:a},{name:fv,type:g,lat:fw,lng:fx,distance:aD,trading_area_id:a,trading_area_distance:a},{name:fy,type:g,lat:fz,lng:fA,distance:fB,trading_area_id:a,trading_area_distance:a},{name:fC,type:g,lat:fD,lng:fE,distance:fF,trading_area_id:a,trading_area_distance:a},{name:fG,type:g,lat:fH,lng:fI,distance:fJ,trading_area_id:a,trading_area_distance:a},{name:fK,type:g,lat:fL,lng:fM,distance:fN,trading_area_id:a,trading_area_distance:a}]},{name:fO,key:e,children:[{name:ap,type:e,lat:fP,lng:fQ,distance:aq,trading_area_id:a,trading_area_distance:a},{name:fR,type:e,lat:fS,lng:fT,distance:fU,trading_area_id:a,trading_area_distance:a},{name:fV,type:e,lat:fW,lng:fX,distance:fY,trading_area_id:a,trading_area_distance:a},{name:fZ,type:e,lat:f_,lng:f$,distance:aC,trading_area_id:a,trading_area_distance:a},{name:ga,type:e,lat:gb,lng:gc,distance:gd,trading_area_id:a,trading_area_distance:a},{name:ge,type:e,lat:gf,lng:gg,distance:gh,trading_area_id:a,trading_area_distance:a},{name:gi,type:e,lat:aE,lng:aF,distance:aG,trading_area_id:a,trading_area_distance:a},{name:gj,type:e,lat:aE,lng:aF,distance:aG,trading_area_id:a,trading_area_distance:a},{name:gk,type:e,lat:gl,lng:gm,distance:gn,trading_area_id:a,trading_area_distance:a},{name:go,type:e,lat:gp,lng:gq,distance:N,trading_area_id:a,trading_area_distance:a},{name:gr,type:e,lat:gs,lng:gt,distance:gu,trading_area_id:a,trading_area_distance:a},{name:gv,type:e,lat:gw,lng:gx,distance:gy,trading_area_id:a,trading_area_distance:a},{name:gz,type:e,lat:gA,lng:gB,distance:gC,trading_area_id:a,trading_area_distance:a},{name:gD,type:e,lat:gE,lng:gF,distance:aH,trading_area_id:a,trading_area_distance:a},{name:gG,type:e,lat:gH,lng:gI,distance:aH,trading_area_id:a,trading_area_distance:a},{name:gJ,type:e,lat:gK,lng:gL,distance:gM,trading_area_id:a,trading_area_distance:a},{name:gN,type:e,lat:gO,lng:gP,distance:gQ,trading_area_id:a,trading_area_distance:a},{name:gR,type:e,lat:gS,lng:gT,distance:gU,trading_area_id:a,trading_area_distance:a},{name:gV,type:e,lat:gW,lng:gX,distance:aI,trading_area_id:a,trading_area_distance:a},{name:gY,type:e,lat:gZ,lng:g_,distance:aI,trading_area_id:a,trading_area_distance:a}]}]},{name:ar,key:as,children:[{name:g$,key:av,children:[{name:aw,type:j,lat:ha,lng:hb,distance:ax,trading_area_id:a,trading_area_distance:a},{name:hc,type:j,lat:hd,lng:he,distance:hf,trading_area_id:a,trading_area_distance:a},{name:hg,type:j,lat:hh,lng:hi,distance:hj,trading_area_id:a,trading_area_distance:a},{name:hk,type:j,lat:hl,lng:hm,distance:hn,trading_area_id:a,trading_area_distance:a},{name:ho,type:j,lat:hp,lng:hq,distance:hr,trading_area_id:a,trading_area_distance:a},{name:hs,type:j,lat:ht,lng:hu,distance:aD,trading_area_id:a,trading_area_distance:a},{name:hv,type:j,lat:hw,lng:hx,distance:hy,trading_area_id:C,trading_area_distance:hz},{name:hA,type:j,lat:hB,lng:hC,distance:hD,trading_area_id:a,trading_area_distance:a},{name:hE,type:j,lat:hF,lng:hG,distance:hH,trading_area_id:o,trading_area_distance:hI},{name:hJ,type:j,lat:hK,lng:hL,distance:hM,trading_area_id:a,trading_area_distance:a},{name:hN,type:j,lat:hO,lng:hP,distance:hQ,trading_area_id:a,trading_area_distance:a},{name:hR,type:j,lat:hS,lng:hT,distance:hU,trading_area_id:o,trading_area_distance:hV}]},{name:hW,key:at,children:[{name:au,type:k,lat:hX,lng:hY,distance:B,trading_area_id:l,trading_area_distance:hZ},{name:h_,type:k,lat:h$,lng:ia,distance:ib,trading_area_id:l,trading_area_distance:ic},{name:id,type:k,lat:ie,lng:if0,distance:ig,trading_area_id:a,trading_area_distance:a},{name:ih,type:k,lat:ii,lng:ij,distance:ik,trading_area_id:a,trading_area_distance:a},{name:il,type:k,lat:im,lng:in0,distance:io,trading_area_id:a,trading_area_distance:a},{name:ip,type:k,lat:iq,lng:ir,distance:is,trading_area_id:a,trading_area_distance:a},{name:it,type:k,lat:iu,lng:iv,distance:iw,trading_area_id:a,trading_area_distance:a},{name:ix,type:k,lat:iy,lng:iz,distance:iA,trading_area_id:a,trading_area_distance:a}]},{name:iB,key:aJ,children:[{name:iC,type:aJ,lat:iD,lng:iE,distance:iF,trading_area_id:a,trading_area_distance:a}]}]}]},service:{title:S,key:T,active:c,facility:[{key:iG,active:c,name:iH},{key:iI,active:c,name:iJ},{key:iK,active:c,name:iL},{key:iM,active:c,name:iN},{key:iO,active:c,name:iP},{key:iQ,active:c,name:iR},{key:iS,active:c,name:iT},{key:iU,active:a,name:iV},{key:iW,active:a,name:iX},{key:iY,active:c,name:iZ},{key:i_,active:c,name:i$},{key:ja,active:a,name:jb},{key:jc,active:a,name:jd},{key:aK,active:c,name:aL},{key:je,active:a,name:jf}],descData:[{label:jg,value:jh},{label:ji,value:jj},{label:jk,value:jl},{label:jm,value:jn},{label:jo,value:jp},{label:jq,value:P}]},preference:{title:jr,active:c,footnote:js,data:[{id:c,name:jt,text:ju,icon:jv},{id:d,name:O,text:jw,icon:jx},{id:aM,name:jy,text:jz,icon:jA},{id:u,name:jB,text:jC,icon:jD}]},remark:{title:U,key:V,active:c,content:jE},houseDetail:{title:W,key:X,active:c},costData:{title:jF,active:c,data:[{name:jG,value:aN,key:jH},{name:jI,value:M,key:jJ},{name:jK,value:aO,key:jL},{name:jM,value:aP,key:jN}]},infoData:{title:jO,active:c,data:[{name:jP,value:jQ,key:jR,alias:b,cate:c},{name:jS,value:jT,key:jU,alias:b,cate:h},{name:jV,value:_,key:$,alias:b,cate:c},{name:jW,value:jX,key:jY,alias:jZ,cate:h},{name:j_,value:j$,key:ka,alias:b,cate:c},{name:kb,value:aQ,key:kc,alias:b,cate:h},{name:aL,value:kd,key:aK,alias:b,cate:c},{name:ke,value:kf,key:kg,alias:b,cate:h},{name:kh,value:ki,key:kj,alias:b,cate:h},{name:kk,value:aR,key:kl,alias:b,cate:c},{name:km,value:kn,key:ko,alias:b,cate:h}],hasCertificate:h},questionData:{title:Y,key:Z,active:c},linkInfo:{avatar:kp,chargeTxt:kq,name:kr,role:d,roleName:ks,roleTxt:kt,certificateStatus:h,certificateTxt:ku,line:kv,imUid:aS,imName:kw,isTransferTel:a,mobile:kx,phone:ky,uid:aS,warnmsg:a,tips:kz,shopVolume:s,shopStatus:h,shopId:kA,rentNum:s,saleNum:kB,skillCases:[],skillWork:[kC,x,kD,kE,kF],isAgent:a,isGoldAgent:a,labelInfo:[kG,kH],isServiceFee:c,isrecmoney:kI},favData:{thumb:kJ,title:r,layout:aR,address:kK,price:D,area:t,kindTxt:n,posttime:kL,count:G,mvip:c,mrecom:a,socialHouse:kM,other:{icon:kN,desc:kO}},gtm_detail_data:{item_id:aU,item_name:r,region_name:J,section_name:K,kind_name:n,price_name:D,shape_name:x,layout_name:a,area_name:t,floor_name:kP,facility_name:kQ,label_name:kR,notice_name:b,life_name:b,fitment_name:b,house_age_name:b,direction_name:b},otherInfo:{decorate:d,decorate_time:aM,decorateDesc:kS},meta:{title:kT,keywords:kU,description:kV,ogimage:kW},extra_fee_text:kX,rent_calculation_data:{rent_price_text:aN,rent_price:D,deposit:kY,service_fee:aO,carport_price:a,carport_price_text:kZ,price_has_carport:p,water_fee:a,water_fee_type:b,has_water_fee_custom:E,electric_fee_type:b,electric_fee:a,has_electric_fee_custom:E,manage_fee:k_,manage_fee_text:aP,has_manage_fee_custom:p,price_contain_text:b,one_time_expenditure:k$,one_time_expenditure_tip:la}}},\"$fKyMiLYH-cw1dyqgfXb4sKDYJRQler_ZeR7OWspkSKKA\":{status:c,msg:\"ok\",data:{cid:ab,name:aa,photo_src:{type:a,src:[lb,lc]},cover_icon:{has_img:c,has_street_img:c,has_video:a,has_full_sky:a,has_full_720:a},in_rank_list:a,rank_list:[],shop_name:ld,address:ac,housing_type:a,housing_type_str:le,age:aQ,has_layout_pic:a,answer_view:a,has_config_pic:a,article_data:{is_show:a,advantage:b,disadvantage:b},station_view:c,park_type:a,agent_view:c,browse:lf,rent:{rooms:[{room:u,name:lg,count:c,price:{content:v,unit:w}}]},rent_data:{rent_online_cnt:c,rent_new_cnt:c,rent_house_owner:a,rent_goods_cnt:h,price_min:{price:v,unit:w}},sale_num:lh}}},state:{$ssubdomain:\"house-rent.591.com.tw\",$sdomainHead:\"rent\",$stimestamp:1785458052820,\"$shouse-detail-im:message\":null},once:new Set([]),_errors:{$fxBcfsYHriCW4VuV_xwtviZAtBswICjZMoTaBtdx4jjY:aT,$fONAKn61W74GK0nCvSiFjpjbB6pT87GrCLjpH_qwYswA:aT,$fg7f3nKSX2zhf13u8YBwRzw0UzGDwAzLs8HIEfwMcxs4:aT,\"$fKyMiLYH-cw1dyqgfXb4sKDYJRQler_ZeR7OWspkSKKA\":aT},serverRendered:E,path:\"\\u002F21708683\",pinia:{user:{isLogin:p,isAdmin:p,adminId:b,userId:b,rawUserId:b,userName:b,realName:b,role:b,sex:b,mobile:b},album:{albumData:{tags:[{key:F,name:aW,type:h,count:c},{key:i,name:aX,type:d,count:G}],items:[{key:F,type:h,photo:m,thumbPhoto:m,origPhoto:m,note:b,source:d,url:H,videoPlayCount:a,file_id:q,normal:{id:aY,is_video:c,video_type:d,source:d,video_rel_id:aZ,cust_video_cover:b,file_id:q,video_url:H,video_pic:m,cover:m,video_play_count:a},ai:[]},{key:i,photoId:a_,photo:a$,origPhoto:ba,thumbPhoto:I,isCover:c,purpose:a,note:b,type:d},{key:i,photoId:bb,photo:bc,origPhoto:bd,thumbPhoto:be,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bf,photo:bg,origPhoto:bh,thumbPhoto:bi,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bj,photo:bk,origPhoto:bl,thumbPhoto:bm,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bn,photo:bo,origPhoto:bp,thumbPhoto:bq,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:br,photo:bs,origPhoto:bt,thumbPhoto:bu,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bv,photo:bw,origPhoto:bx,thumbPhoto:by,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bz,photo:bA,origPhoto:bB,thumbPhoto:bC,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bD,photo:bE,origPhoto:bF,thumbPhoto:bG,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bH,photo:bI,origPhoto:bJ,thumbPhoto:bK,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bL,photo:bM,origPhoto:bN,thumbPhoto:bO,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bP,photo:bQ,origPhoto:bR,thumbPhoto:bS,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bT,photo:bU,origPhoto:bV,thumbPhoto:bW,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:bX,photo:bY,origPhoto:bZ,thumbPhoto:b_,isCover:a,purpose:a,note:b,type:d},{key:i,photoId:b$,photo:ca,origPhoto:cb,thumbPhoto:cc,isCover:a,purpose:a,note:b,type:d}],purposes:[],extra:{thumb:I,video_ga:aV}},ga:aV},\"rent-detail-info\":{ctx:{id:li,type:c,breadcrumb:[{name:J,id:c,query:cd,link:\"https:\\u002F\\u002Frent.591.com.tw\\u002F?region=1\",style:b},{name:K,id:c,query:ce,link:\"https:\\u002F\\u002Frent.591.com.tw\\u002F?region=1&section=1\",style:b},{name:n,id:h,query:L,link:\"https:\\u002F\\u002Frent.591.com.tw\\u002F?region=1&section=1&kind=2\",style:b},{name:aU,id:li,query:\"id\",link:b,style:\"font-weight: bold;\"}],title:r,status:cf,deposit:M,kind:h,relieved:a,regionId:c,sectionId:c,shareInfo:{url:cg,from:ch,title:ci},dealText:b,dealTime:a,endTime:cj,browse:{pc:s,mobile:N},tags:[{id:ck,value:cl},{id:h,value:cm},{id:cn,value:co},{id:d,value:O},{id:t,value:cp},{id:u,value:cq},{id:cr,value:P}],price:v,priceUnit:w,navData:[{title:Q,key:R,active:c},{title:S,key:T,active:c},{title:U,key:V,active:c},{title:W,key:X,active:c},{title:cs,key:ct,active:c},{title:Y,key:Z,active:c}],priceCacheTxt:b,priceCache:[],info:[{name:cu,value:n,key:L},{name:cv,value:_,key:$},{name:cw,value:cx,key:cy},{name:cz,value:x,key:cA}],publish:{id:h,name:cB,key:cC,postTime:cD,updateTime:cE},rooms:{title:cF,key:cG,active:a,data:[]},positionRound:{title:Q,key:R,active:c,communityName:aa,communityId:ab,address:ac,lat:cH,lng:cI,data:[{name:ad,key:ae,children:[{type:af,name:y,distance:z,distanceTxt:cJ},{type:A,name:ag,distance:ah,distanceTxt:cK},{type:A,name:ai,distance:aj,distanceTxt:cL}]},{name:ak,key:al,children:[{type:am,name:an,distance:ao,distanceTxt:cM},{type:e,name:ap,distance:aq,distanceTxt:cN},{type:b,name:b,distance:a,distanceTxt:cO}]},{name:ar,key:as,children:[{type:at,name:au,distance:B,distanceTxt:cP},{type:av,name:aw,distance:ax,distanceTxt:cQ},{type:b,name:b,distance:a,distanceTxt:cR}]}],mapData:[{name:ad,key:ae,children:[{name:cS,key:af,children:[{name:y,type:cT,lat:ay,lng:az,distance:z,trading_area_id:a,trading_area_distance:a}]},{name:cU,key:A,children:[{name:ag,type:f,lat:cV,lng:cW,distance:ah,trading_area_id:a,trading_area_distance:a},{name:ai,type:f,lat:cX,lng:cY,distance:aj,trading_area_id:a,trading_area_distance:a},{name:cZ,type:f,lat:c_,lng:c$,distance:da,trading_area_id:a,trading_area_distance:a},{name:db,type:f,lat:dc,lng:dd,distance:B,trading_area_id:l,trading_area_distance:de},{name:df,type:f,lat:dg,lng:dh,distance:di,trading_area_id:a,trading_area_distance:a},{name:y,type:f,lat:ay,lng:az,distance:z,trading_area_id:a,trading_area_distance:a},{name:aA,type:f,lat:dj,lng:dk,distance:dl,trading_area_id:a,trading_area_distance:a},{name:aB,type:f,lat:dm,lng:dn,distance:do0,trading_area_id:a,trading_area_distance:a},{name:aB,type:f,lat:dp,lng:dq,distance:dr,trading_area_id:a,trading_area_distance:a},{name:ds,type:f,lat:dt,lng:du,distance:dv,trading_area_id:a,trading_area_distance:a},{name:aA,type:f,lat:dw,lng:dx,distance:dy,trading_area_id:a,trading_area_distance:a},{name:dz,type:f,lat:dA,lng:dB,distance:dC,trading_area_id:l,trading_area_distance:dD},{name:dE,type:f,lat:dF,lng:dG,distance:dH,trading_area_id:a,trading_area_distance:a},{name:dI,type:f,lat:dJ,lng:dK,distance:dL,trading_area_id:a,trading_area_distance:a},{name:dM,type:f,lat:dN,lng:dO,distance:dP,trading_area_id:l,trading_area_distance:dQ},{name:dR,type:f,lat:dS,lng:dT,distance:dU,trading_area_id:l,trading_area_distance:dV},{name:dW,type:f,lat:dX,lng:dY,distance:dZ,trading_area_id:d_,trading_area_distance:d$},{name:ea,type:f,lat:eb,lng:ec,distance:ed,trading_area_id:a,trading_area_distance:a},{name:ee,type:f,lat:ef,lng:eg,distance:eh,trading_area_id:a,trading_area_distance:a},{name:ei,type:f,lat:ej,lng:ek,distance:el,trading_area_id:a,trading_area_distance:a}]}]},{name:ak,key:al,children:[{name:em,key:am,children:[{name:en,type:g,lat:eo,lng:ep,distance:eq,trading_area_id:a,trading_area_distance:a},{name:er,type:g,lat:es,lng:et,distance:eu,trading_area_id:a,trading_area_distance:a},{name:ev,type:g,lat:ew,lng:ex,distance:ey,trading_area_id:a,trading_area_distance:a},{name:ez,type:g,lat:eA,lng:eB,distance:eC,trading_area_id:a,trading_area_distance:a},{name:eD,type:g,lat:eE,lng:eF,distance:eG,trading_area_id:a,trading_area_distance:a},{name:eH,type:g,lat:eI,lng:eJ,distance:eK,trading_area_id:a,trading_area_distance:a},{name:eL,type:g,lat:eM,lng:eN,distance:eO,trading_area_id:a,trading_area_distance:a},{name:an,type:g,lat:eP,lng:eQ,distance:ao,trading_area_id:l,trading_area_distance:aC},{name:eR,type:g,lat:eS,lng:eT,distance:eU,trading_area_id:o,trading_area_distance:eV},{name:eW,type:g,lat:eX,lng:eY,distance:eZ,trading_area_id:o,trading_area_distance:e_},{name:e$,type:g,lat:fa,lng:fb,distance:fc,trading_area_id:C,trading_area_distance:fd},{name:fe,type:g,lat:ff,lng:fg,distance:fh,trading_area_id:a,trading_area_distance:a},{name:fi,type:g,lat:fj,lng:fk,distance:fl,trading_area_id:C,trading_area_distance:fm},{name:fn,type:g,lat:fo,lng:fp,distance:fq,trading_area_id:a,trading_area_distance:a},{name:fr,type:g,lat:fs,lng:ft,distance:fu,trading_area_id:a,trading_area_distance:a},{name:fv,type:g,lat:fw,lng:fx,distance:aD,trading_area_id:a,trading_area_distance:a},{name:fy,type:g,lat:fz,lng:fA,distance:fB,trading_area_id:a,trading_area_distance:a},{name:fC,type:g,lat:fD,lng:fE,distance:fF,trading_area_id:a,trading_area_distance:a},{name:fG,type:g,lat:fH,lng:fI,distance:fJ,trading_area_id:a,trading_area_distance:a},{name:fK,type:g,lat:fL,lng:fM,distance:fN,trading_area_id:a,trading_area_distance:a}]},{name:fO,key:e,children:[{name:ap,type:e,lat:fP,lng:fQ,distance:aq,trading_area_id:a,trading_area_distance:a},{name:fR,type:e,lat:fS,lng:fT,distance:fU,trading_area_id:a,trading_area_distance:a},{name:fV,type:e,lat:fW,lng:fX,distance:fY,trading_area_id:a,trading_area_distance:a},{name:fZ,type:e,lat:f_,lng:f$,distance:aC,trading_area_id:a,trading_area_distance:a},{name:ga,type:e,lat:gb,lng:gc,distance:gd,trading_area_id:a,trading_area_distance:a},{name:ge,type:e,lat:gf,lng:gg,distance:gh,trading_area_id:a,trading_area_distance:a},{name:gi,type:e,lat:aE,lng:aF,distance:aG,trading_area_id:a,trading_area_distance:a},{name:gj,type:e,lat:aE,lng:aF,distance:aG,trading_area_id:a,trading_area_distance:a},{name:gk,type:e,lat:gl,lng:gm,distance:gn,trading_area_id:a,trading_area_distance:a},{name:go,type:e,lat:gp,lng:gq,distance:N,trading_area_id:a,trading_area_distance:a},{name:gr,type:e,lat:gs,lng:gt,distance:gu,trading_area_id:a,trading_area_distance:a},{name:gv,type:e,lat:gw,lng:gx,distance:gy,trading_area_id:a,trading_area_distance:a},{name:gz,type:e,lat:gA,lng:gB,distance:gC,trading_area_id:a,trading_area_distance:a},{name:gD,type:e,lat:gE,lng:gF,distance:aH,trading_area_id:a,trading_area_distance:a},{name:gG,type:e,lat:gH,lng:gI,distance:aH,trading_area_id:a,trading_area_distance:a},{name:gJ,type:e,lat:gK,lng:gL,distance:gM,trading_area_id:a,trading_area_distance:a},{name:gN,type:e,lat:gO,lng:gP,distance:gQ,trading_area_id:a,trading_area_distance:a},{name:gR,type:e,lat:gS,lng:gT,distance:gU,trading_area_id:a,trading_area_distance:a},{name:gV,type:e,lat:gW,lng:gX,distance:aI,trading_area_id:a,trading_area_distance:a},{name:gY,type:e,lat:gZ,lng:g_,distance:aI,trading_area_id:a,trading_area_distance:a}]}]},{name:ar,key:as,children:[{name:g$,key:av,children:[{name:aw,type:j,lat:ha,lng:hb,distance:ax,trading_area_id:a,trading_area_distance:a},{name:hc,type:j,lat:hd,lng:he,distance:hf,trading_area_id:a,trading_area_distance:a},{name:hg,type:j,lat:hh,lng:hi,distance:hj,trading_area_id:a,trading_area_distance:a},{name:hk,type:j,lat:hl,lng:hm,distance:hn,trading_area_id:a,trading_area_distance:a},{name:ho,type:j,lat:hp,lng:hq,distance:hr,trading_area_id:a,trading_area_distance:a},{name:hs,type:j,lat:ht,lng:hu,distance:aD,trading_area_id:a,trading_area_distance:a},{name:hv,type:j,lat:hw,lng:hx,distance:hy,trading_area_id:C,trading_area_distance:hz},{name:hA,type:j,lat:hB,lng:hC,distance:hD,trading_area_id:a,trading_area_distance:a},{name:hE,type:j,lat:hF,lng:hG,distance:hH,trading_area_id:o,trading_area_distance:hI},{name:hJ,type:j,lat:hK,lng:hL,distance:hM,trading_area_id:a,trading_area_distance:a},{name:hN,type:j,lat:hO,lng:hP,distance:hQ,trading_area_id:a,trading_area_distance:a},{name:hR,type:j,lat:hS,lng:hT,distance:hU,trading_area_id:o,trading_area_distance:hV}]},{name:hW,key:at,children:[{name:au,type:k,lat:hX,lng:hY,distance:B,trading_area_id:l,trading_area_distance:hZ},{name:h_,type:k,lat:h$,lng:ia,distance:ib,trading_area_id:l,trading_area_distance:ic},{name:id,type:k,lat:ie,lng:if0,distance:ig,trading_area_id:a,trading_area_distance:a},{name:ih,type:k,lat:ii,lng:ij,distance:ik,trading_area_id:a,trading_area_distance:a},{name:il,type:k,lat:im,lng:in0,distance:io,trading_area_id:a,trading_area_distance:a},{name:ip,type:k,lat:iq,lng:ir,distance:is,trading_area_id:a,trading_area_distance:a},{name:it,type:k,lat:iu,lng:iv,distance:iw,trading_area_id:a,trading_area_distance:a},{name:ix,type:k,lat:iy,lng:iz,distance:iA,trading_area_id:a,trading_area_distance:a}]},{name:iB,key:aJ,children:[{name:iC,type:aJ,lat:iD,lng:iE,distance:iF,trading_area_id:a,trading_area_distance:a}]}]}]},service:{title:S,key:T,active:c,facility:[{key:iG,active:c,name:iH},{key:iI,active:c,name:iJ},{key:iK,active:c,name:iL},{key:iM,active:c,name:iN},{key:iO,active:c,name:iP},{key:iQ,active:c,name:iR},{key:iS,active:c,name:iT},{key:iU,active:a,name:iV},{key:iW,active:a,name:iX},{key:iY,active:c,name:iZ},{key:i_,active:c,name:i$},{key:ja,active:a,name:jb},{key:jc,active:a,name:jd},{key:aK,active:c,name:aL},{key:je,active:a,name:jf}],descData:[{label:jg,value:jh},{label:ji,value:jj},{label:jk,value:jl},{label:jm,value:jn},{label:jo,value:jp},{label:jq,value:P}]},preference:{title:jr,active:c,footnote:js,data:[{id:c,name:jt,text:ju,icon:jv},{id:d,name:O,text:jw,icon:jx},{id:aM,name:jy,text:jz,icon:jA},{id:u,name:jB,text:jC,icon:jD}]},remark:{title:U,key:V,active:c,content:jE},houseDetail:{title:W,key:X,active:c},costData:{title:jF,active:c,data:[{name:jG,value:aN,key:jH},{name:jI,value:M,key:jJ},{name:jK,value:aO,key:jL},{name:jM,value:aP,key:jN}]},infoData:{title:jO,active:c,data:[{name:jP,value:jQ,key:jR,alias:b,cate:c},{name:jS,value:jT,key:jU,alias:b,cate:h},{name:jV,value:_,key:$,alias:b,cate:c},{name:jW,value:jX,key:jY,alias:jZ,cate:h},{name:j_,value:j$,key:ka,alias:b,cate:c},{name:kb,value:aQ,key:kc,alias:b,cate:h},{name:aL,value:kd,key:aK,alias:b,cate:c},{name:ke,value:kf,key:kg,alias:b,cate:h},{name:kh,value:ki,key:kj,alias:b,cate:h},{name:kk,value:aR,key:kl,alias:b,cate:c},{name:km,value:kn,key:ko,alias:b,cate:h}],hasCertificate:h},questionData:{title:Y,key:Z,active:c},linkInfo:{avatar:kp,chargeTxt:kq,name:kr,role:d,roleName:ks,roleTxt:kt,certificateStatus:h,certificateTxt:ku,line:kv,imUid:aS,imName:kw,isTransferTel:a,mobile:kx,phone:ky,uid:aS,warnmsg:a,tips:kz,shopVolume:s,shopStatus:h,shopId:kA,rentNum:s,saleNum:kB,skillCases:[],skillWork:[kC,x,kD,kE,kF],isAgent:a,isGoldAgent:a,labelInfo:[kG,kH],isServiceFee:c,isrecmoney:kI},favData:{thumb:kJ,title:r,layout:aR,address:kK,price:D,area:t,kindTxt:n,posttime:kL,count:G,mvip:c,mrecom:a,socialHouse:kM,other:{icon:kN,desc:kO}},gtm_detail_data:{item_id:aU,item_name:r,region_name:J,section_name:K,kind_name:n,price_name:D,shape_name:x,layout_name:a,area_name:t,floor_name:kP,facility_name:kQ,label_name:kR,notice_name:b,life_name:b,fitment_name:b,house_age_name:b,direction_name:b},otherInfo:{decorate:d,decorate_time:aM,decorateDesc:kS},meta:{title:kT,keywords:kU,description:kV,ogimage:kW},extra_fee_text:kX,rent_calculation_data:{rent_price_text:aN,rent_price:D,deposit:kY,service_fee:aO,carport_price:a,carport_price_text:kZ,price_has_carport:p,water_fee:a,water_fee_type:b,has_water_fee_custom:E,electric_fee_type:b,electric_fee:a,has_electric_fee_custom:E,manage_fee:k_,manage_fee_text:aP,has_manage_fee_custom:p,price_contain_text:b,one_time_expenditure:k$,one_time_expenditure_tip:la},communityInfo:{cid:ab,name:aa,photo_src:{type:a,src:[lb,lc]},cover_icon:{has_img:c,has_street_img:c,has_video:a,has_full_sky:a,has_full_720:a},in_rank_list:a,rank_list:[],shop_name:ld,address:ac,housing_type:a,housing_type_str:le,age:aQ,has_layout_pic:a,answer_view:a,has_config_pic:a,article_data:{is_show:a,advantage:b,disadvantage:b},station_view:c,park_type:a,agent_view:c,browse:lf,rent:{rooms:[{room:u,name:lg,count:c,price:{content:v,unit:w}}]},rent_data:{rent_online_cnt:c,rent_new_cnt:c,rent_house_owner:a,rent_goods_cnt:h,price_min:{price:v,unit:w}},sale_num:lh}},ga:aV,communities:[]},global:{firstGAText:b,isWareOwner:p,csUrlSearch:b}},config:{public:{bffURL:\"https:\\u002F\\u002Fbff.591.com.tw\",bffUniversalURL:\"https:\\u002F\\u002Fbff-universal.591.com.tw\",bffBusinessURL:\"https:\\u002F\\u002Fbff-business.591.com.tw\",bffNewhouseURL:\"https:\\u002F\\u002Fbff-newhouse.591.com.tw\",bffHouseURL:\"https:\\u002F\\u002Fbff-house.591.com.tw\",bffConfigURL:\"https:\\u002F\\u002Fbff-config.591.com.tw\",bffUserURL:\"https:\\u002F\\u002Fbff-user.591.com.tw\",bffImURL:\"https:\\u002F\\u002Fbff-im.591.com.tw\",bffMarketURL:\"https:\\u002F\\u002Fbff-market.591.com.tw\",apiURL:\"https:\\u002F\\u002Fapi.591.com.tw\",baseURL:\"https:\\u002F\\u002Fwww.591.com.tw\",saleURL:\"https:\\u002F\\u002Fsale.591.com.tw\",unionUrl:\"https:\\u002F\\u002Funion.591.com.tw\",statisticsURL:\"https:\\u002F\\u002Fstatistics.591.com.tw\",gmapKey:\"AIzaSyA_T88jtygzK0sDQBqdchovUS9RcPWuP6c\",environment:lj,lineAppUrl:\"https:\\u002F\\u002Fminiapp.line.me\\u002F2008479303-zpEB3WDQ\",lineLiffUrl:\"https:\\u002F\\u002Fline-liff.591.com.tw\",sentry:{serverDsn:\"https:\\u002F\\u002Fbdc1bee7aeb53f332cb5613c2b02ce7f@sentry.addcn.com\\u002F81\",clientDsn:\"https:\\u002F\\u002F698cc2ce35c591657761bb598bcc4cbc@sentry.addcn.com\\u002F80\",environment:lj}},app:{baseURL:\"\\u002F\",buildId:\"3fbab01c-4a7a-4fa9-a19e-0e1493c86e6a\",buildAssetsDir:\"\\u002Fhouse\\u002F\",cdnURL:\"\\u002F\\u002Fs.591.com.tw\\u002F\"}}}}(0,\"\",1,3,\"restaurant\",\"bus_station\",\"shopping_mall\",2,\"picture\",\"primary_school\",\"secondary_school\",66123,\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fvideo\\u002Fcover\\u002F2026-06-30\\u002F3146346.png!1000x.water2.png\",\"獨立套房\",66249,false,3146346,\"獨家出租!東門捷運站全天候保全管理天然瓦斯\",13,10,5,\"24,000\",\"元\\u002F月\",\"電梯大樓\",\"東門站\",264,\"bus\",214,66125,24000,true,\"video\",15,\"https:\\u002F\\u002Fvideo.591.com.tw\\u002Fonline\\u002Ftarget\\u002Fhouse\\u002Fhls\\u002F2026-06-30\\u002F3146346\\u002Fmaster.m3u8\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986163103805.jpg!400x300.water2.jpg\",\"台北市\",\"中正區\",\"kind\",\"二個月\",54,\"拎包入住\",\"可開伙\",\"位置與周邊\",\"positionRound\",\"租住與設備\",\"service\",\"屋況介紹\",\"remark\",\"房屋詳情\",\"houseDetail\",\"房屋問答\",\"question\",\"10坪\",\"area\",\"中正歐堡\",985,\"中正區信義路二段65號\",\"交通\",\"traffic\",\"subway\",\"捷運東門站(信義)\",86,\"信義杭州路口站\",162,\"生活\",\"live\",\"shop\",\"愛國東路婚紗攝影街\",678,\"富記食品\",23,\"教育\",\"education\",\"secondary\",\"臺北市私立金甌女子高級中學\",\"primary\",\"臺北市大安區金華國民小學\",316,25.033876199999998,121.5287139,\"仁愛杭州路口站\",\"愛國金山路口站\",36,1160,25.0347273,121.5267743,49,67,80,\"university\",\"lift\",\"電梯\",4,\"24,000元\\u002F月\",\"收取服務費\",\"1,340元\\u002F月\",\"28年\",\"樓中樓\",565437,void 0,\"R21708683\",{},\"影片\",\"圖片\",5333452,15573210,492058338,\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986163103805.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986163103805.jpg!x600.water2.jpg\",492058339,\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986154947307.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986154947307.jpg!x600.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986154947307.jpg!400x300.water2.jpg\",492058340,\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986159297204.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986159297204.jpg!x600.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986159297204.jpg!400x300.water2.jpg\",492058341,\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986152518603.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986152518603.jpg!x600.water2.jpg\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986152518603.jpg!400x300.water2.jpg\",492058342,\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986170629508.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986170629508.jpg!x600.water2.jpg\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986170629508.jpg!400x300.water2.jpg\",492058343,\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986165180908.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986165180908.jpg!x600.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986165180908.jpg!400x300.water2.jpg\",492058344,\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986180513509.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986180513509.jpg!x600.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986180513509.jpg!400x300.water2.jpg\",492058345,\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986190982002.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986190982002.jpg!x600.water2.jpg\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986190982002.jpg!400x300.water2.jpg\",492058346,\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986186560701.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986186560701.jpg!x600.water2.jpg\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986186560701.jpg!400x300.water2.jpg\",492058347,\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986190983608.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986190983608.jpg!x600.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986190983608.jpg!400x300.water2.jpg\",492058348,\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986198338105.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986198338105.jpg!x600.water2.jpg\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986198338105.jpg!400x300.water2.jpg\",492058349,\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986197894307.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986197894307.jpg!x600.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986197894307.jpg!400x300.water2.jpg\",492058350,\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986207684002.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986207684002.jpg!x600.water2.jpg\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986207684002.jpg!400x300.water2.jpg\",492058351,\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280987369405900.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280987369405900.jpg!x600.water2.jpg\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280987369405900.jpg!400x300.water2.jpg\",492058352,\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280987895214901.jpg!1000x.water2.jpg\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280987895214901.jpg!x600.water2.jpg\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280987895214901.jpg!400x300.water2.jpg\",\"region\",\"section\",\"open\",\"https:\\u002F\\u002Fwww.591.com.tw\\u002F1R?salt=SAfxe&s=\",\"來自【591】\",\"台北市中正區，獨立套房出租，24000元\\u002F月，詳情：\",\"2026-08-25\",17,\"影片賞屋\",\"近捷運\",16,\"新上架\",\"有電梯\",\"隨時可遷入\",6,\"自我介紹\",\"selfIntroduce\",\"類型\",\"使用坪數\",\"樓層\",\"7F\\u002F12F\",\"floor\",\"型態\",\"shape\",\"新發佈\",\"new\",\"此房屋在4天前發佈\",\"2小時內更新\",\"所有房間\",\"room\",\"25.0347790\",\"121.5262985\",\"距房屋約264公尺\",\"距房屋約86公尺\",\"距房屋約162公尺\",\"距房屋約678公尺\",\"距房屋約23公尺\",\"附近有20家購物中心，20家餐廳\",\"距房屋約214公尺\",\"距房屋約316公尺\",\"附近有12所國小，8所國中，1所大學\",\"捷運\",\"subway_station\",\"公車\",25.034177099999997,121.526828,25.035276000000003,121.52478959999999,\"捷運東門站(金山)\",25.033218700000003,121.5269808,187,\"金甌女中站\",25.034984599999998,121.52419099999997,464,\"仁愛路二段站\",25.036753299999997,121.52773099999999,263,25.0368081,121.52486449999998,268,25.0319,121.52616800000001,321,25.031744,121.525596,345,\"信義永康街口(捷運東門站)\",25.033674,121.529724,367,25.0383851,121.52547190000001,410,\"愛國東路口站\",25.032705,121.52288000000001,415,336,\"仁愛臨沂街口站\",25.038235699999998,121.5279977,421,\"公企中心站\",25.0305008,121.52653389999999,477,\"中正紀念堂站\",25.0372155,121.52070270000002,626,390,\"捷運中正紀念堂站(愛國)\",25.033754,121.51983600000001,661,8,\"金山潮州街口站\",25.0286582,121.52638340000001,681,66114,486,\"信義新生路口站\",25.033243,121.532852,682,\"仁愛新生路口站\",25.0378491,121.5328787,746,\"仁愛林森路口站\",25.040387700000004,121.52201659999999,759,\"購物\",\"遠雄建設\",25.0342024,121.5262951,65,\"美安電商加盟輔導處 東門\",25.0344062,121.5269837,81,\"雅晟磁磚\",25.0376556,121.528319,380,\"永康商圈\",25.0335378,121.5299566,394,\"勇闖天涯國際有限公司\",25.0327289,121.52949,395,\"名華西服\",25.029855599999998,121.52934799999998,628,\"全聯大安新生南店\",25.0329602,121.5324245,650,25.0334799,121.51972359999998,\"雅玩陶坊\",25.028567,121.52945709999999,761,402,\"자오허딩 문물시장\",25.0285314,121.52949290000001,766,399,\"臺北忠孝教育中心\",25.0272439,121.5220343,942,122,\"微風台大醫院商場\",25.0402867,121.51913180000001,947,\"寶雅POAY\",25.0267242,121.522215,986,71,\"華山市場蓁品珠寶銀飾設計的\",25.0442859,121.5248498,1068,\"生麗保養品經銷\",25.044332700000002,121.52801469999999,1077,\"TOKO INDOSAKURA\",25.0274453,121.5344829,\"八德資訊商圈\",25.044176099999998,121.5317018,1179,\"Renluxus'芮娜瑟斯\",25.045456899999998,121.5268799,1189,\"光華資訊商圈\",25.0442598,121.5320456,1203,\"哈玩具 台北三創店\",25.0453481,121.5309298,1265,\"餐飲\",25.034982,121.526326,\"飛達香\",25.0350599,121.5262536,32,\"三san\",25.0346277,121.5265818,34,\"協雞鴨店\",25.034682,121.526634,\"鱻鮮料理\",25.034583200000004,121.52659430000001,37,\"羅媽媽米粉湯\",25.0345512,121.5266419,43,\"小廚房\",\"東門大腸麵線\",\"平底鍋中華麵食\",25.0348294,121.5268156,53,\"純手工上海清蒸臭豆腐\",25.0349616,121.5267942,\"石二鍋 台北信義店\",25.034265299999998,121.52632940000001,58,\"不是醬\",25.0350305,121.5268377,62,\"樂壓 Cheerful pressed sandwich\",25.034527999999998,121.52686299999999,64,\"御園坊\",25.03505179999999,121.5268814,\"黃媽媽米粉湯\",25.0345748,121.5269159,\"沅誠海鮮水餃\",25.0344269,121.5269027,73,\"咪咪美食\",25.0351935,121.5268647,74,\"郭老師養生月子餐\",25.035076,121.525613,77,\"慶豐素食點心\",25.03511899999999,121.5269879,\"東門三色海鮮水餃店\",25.0353595,121.5267636,\"國小\",25.0322766,121.5277667,\"臺北市中正區東門國民小學\",25.0386345,121.5209036,693,\"臺北市大安區幸安國民小學\",25.036968899999998,121.5349574,906,\"臺北市中正區忠孝國民小學\",25.043088599999997,121.53158140000001,1067,\"台北市立教育大學附設實驗國民小學員生消費合作社\",25.0360732,121.5152463,1123,\"臺北市新視野實驗教育機構(小學部)\",25.0309656,121.51558899999999,\"臺北市中正區河堤國民小學\",25.023201999999998,121.5223251,1349,331,\"龍安國小附幼\",25.023873599999998,121.5348482,1488,\"臺北市私立新民雙語小學\",25.0222236,121.5316611,1498,382,\"臺北市大安區龍安國民小學\",25.0236178,121.53521819999999,1533,\"龍安國小後門泳池\",25.023362600000002,121.53598679999999,1602,\"臺北市大安區古亭國民小學\",25.0205359,121.5287222,1603,494,\"國中\",25.034768,121.5241819,457,\"臺北市立中正國民中學\",25.0322885,121.521894,524,272,\"臺北市立金華國民中學\",25.031130899999997,121.5328307,774,\"臺北市立成功高級中學\",25.042426300000002,121.52360589999998,893,\"成功高中101班\",25.0433343,121.5235875,990,\"臺北市立弘道國民中學\",25.0374875,121.5152934,1149,\"台北市私立延平高級中學\",25.0367982,121.5384617,1246,\"建國中學夢紅樓\",25.0311081,121.5131798,1384,\"大學\",\"台北科技大學\",25.0390034,121.532767,804,\"fridge\",\"冰箱\",\"washer\",\"洗衣機\",\"tv\",\"電視\",\"cold\",\"冷氣\",\"heater\",\"熱水器\",\"bed\",\"床\",\"closet\",\"衣櫃\",\"fourth\",\"第四台\",\"net\",\"網路\",\"gas\",\"天然瓦斯\",\"sofa\",\"沙發\",\"table_chairs\",\"桌椅\",\"balcony\",\"陽台\",\"park\",\"車位\",\"最短租期\",\"一年\",\"身份要求\",\"學生、上班族、家庭\",\"可遷入日\",\"可隨時遷入\",\"性別\",\"此房屋男女皆可租住\",\"養寵物\",\"不可養寵物\",\"開伙\",\"優選理由\",\"還有1個選擇本房的理由\",\"產權有保障\",\"已在地政局辦理建物產權登記，選擇更安心\",\"https:\\u002F\\u002Fs.591.com.tw\\u002Fbuild\\u002Fstatic\\u002Fapp\\u002Frent\\u002Fperfer_01.png\",\"滿足90%的日常所需設備，享輕鬆入住體驗\",\"https:\\u002F\\u002Fs.591.com.tw\\u002Fbuild\\u002Fstatic\\u002Fapp\\u002Frent\\u002Fperfer_03.png\",\"7日上新\",\"4天前發佈，租到概率高\",\"https:\\u002F\\u002Fs.591.com.tw\\u002Fbuild\\u002Fstatic\\u002Fapp\\u002Frent\\u002Fperfer_04.png\",\"出行超便利\",\"距東門捷運站 264公尺，通勤\\u002F購物都方便\",\"https:\\u002F\\u002Fs.591.com.tw\\u002Fbuild\\u002Fstatic\\u002Fapp\\u002Frent\\u002Fperfer_05.png\",\"\\u003Cp dir=\\\"auto\\\"\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(74, 74, 74);\\\"\\u003E《2026年最新優惠⽅案》\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(74, 74, 74);\\\"\\u003E獨家!!!!!稀有物件\\u003C\\u002Fspan\\u003E\\u003Cbr\\u003E\\u003Cbr\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(0, 0, 0);\\\"\\u003E\\u003Cstrong\\u003E即日起可以預約看屋喔!\\u003C\\u002Fstrong\\u003E\\u003C\\u002Fspan\\u003E\\u003Cbr\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(255, 0, 0);\\\"\\u003E位置可以約GOOGLE信義路二段65號&nbsp;中正歐堡社區\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(255, 0, 0);\\\"\\u003E走路到東門站2號出口慢慢走約2分鐘就到\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003Cbr\\u003E東門\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(255, 0, 0);\\\"\\u003E市場漫步約1分鐘可以到\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(255, 0, 0);\\\"\\u003E台水&nbsp;台電&nbsp;大台北瓦斯帳單&nbsp;全天候管理員&nbsp;垃圾專人處理\\u003C\\u002Fspan\\u003E\\u003C\\u002Fp\\u003E\\u003Cp dir=\\\"auto\\\"\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(255, 0, 0);\\\"\\u003E本案為挑高3米6&nbsp;增建臥室&nbsp;使用空間大&nbsp;另有客廳及書房空間\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003Cbr\\u003E原租金26500元\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(255, 0, 0);\\\"\\u003E租期一年優惠為25000元\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E(另管理費1340元)\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(255, 0, 0);\\\"\\u003E\\u003Cbr\\u003E租期二年優惠為24000元\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E(另管理費1340元)\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(255, 0, 0);\\\"\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(255, 0, 0);\\\"\\u003E看屋免費&nbsp;成交酌收半個月服務費&nbsp;\\u003Cbr\\u003E東門&nbsp;永康商圈生活機能超優\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(74, 74, 74);\\\"\\u003E請勿用５９１問題詢問，訊息完全看不到喔\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(74, 74, 74);\\\"\\u003E地址:中正區信義路二段65號\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(74, 74, 74);\\\"\\u003E即⽇起可以預約看屋超搶⼿\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(74, 74, 74);\\\"\\u003E獨立門牌&nbsp;水、電&nbsp;天然瓦斯都是照帳單支付\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(74, 74, 74);\\\"\\u003E現況有變頻空調&nbsp;衣櫃&nbsp;&nbsp;洗衣機&nbsp;熱水器&nbsp;冰箱&nbsp;智慧電視&nbsp;沙發\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(74, 74, 74);\\\"\\u003E垃圾專人處理&nbsp;免專用垃圾袋\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(74, 74, 74);\\\"\\u003E房客嚴選!非常感謝限正職(需出⽰公司名片或是在職證明)\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(74, 74, 74);\\\"\\u003E聯絡電話０９１９９５９９９５洪先⽣\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px;\\\"\\u003E\\u003Cbr\\u003E\\u003Cbr\\u003E\\u003C\\u002Fspan\\u003E\\u003Cspan style=\\\"font-size: 18px; color: rgb(74, 74, 74);\\\"\\u003E（LINEID：０９１９９５９９９５ａ)\\u003C\\u002Fspan\\u003E\\u003C\\u002Fp\\u003E\\r\\n附近有便利商店、傳統市場、公園綠地、學校。\\r\\n本房屋近東門捷運站2號出口捷運站。\",\"房屋價格\",\"租金\",\"rentPrice\",\"押金\",\"deposit\",\"服務費\",\"serviceFee\",\"管理費\",\"manageprice\",\"基礎資料\",\"產權登記\",\"房屋已辦產權登記\",\"hasCertificate\",\"法定用途\",\"商業用\",\"purpose\",\"可使用面積\",\"建物面積\",\"6.00坪\",\"buildArea\",\"(不含公設)\",\"權狀坪數\",\"10.33坪\",\"area_right\",\"屋齡\",\"age\",\"有\",\"裝潢程度\",\"中檔裝潢\",\"decorate\",\"裝潢時間\",\"三年以上\",\"decorate_time\",\"特殊房型\",\"floor_in_floor\",\"其他特色\",\"影片賞屋、近捷運、新上架、拎包入住、有電梯、隨時可遷入、可開伙\",\"tags\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fuser\\u002F2025\\u002F03\\u002F30\\u002F1743330664904.jpg!100x100.jpg\",\"$: 仲介, 收服務費\",\"仲介: 洪先生\",\"仲介\",\"經紀業: 喬鉅不動產仲介經紀有限公司\",\"證書字號：95年登字第077706號\\r\\n公司名：中信房屋\\r\\n分公司：南門加盟店\\r\\n經紀業：喬鉅不動產仲介經紀有限公司\",\"https:\\u002F\\u002Fline.me\\u002Fti\\u002Fp\\u002Ff67SgLSIOP\",\"洪先生\",\"0919-959-995\",\"02-23412111\",\"有1人正在查看此房屋\",26792,35,\"豪宅\\u002F別墅\",\"學區房\",\"社區住宅\",\"行情諮詢\",\"歷史已成交439筆\",\"在售物件35筆·在租物件13筆\",\"收服務費\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986163103805.jpg!190x150.water2.jpg\",\"台北市中正區信義路二段65號\",1785062831,\"0\",\"metro\",\"距東門站264公尺\",\"7F\",\"冰箱,洗衣機,電視,冷氣,熱水器,床,衣櫃,天然瓦斯,沙發,電梯\",\"影片賞屋,近捷運,新上架,拎包入住,有電梯,隨時可遷入,可開伙\",\"三年以上 中檔裝潢\",\"{{title}} - 591租屋網\",\"{{title}},台北市中正區獨立套房出租,591租屋網\",\"台北市中正區獨立套房出租：租金?元\\u002F月，面積?坪，位於信義路二段65號，更多出租詳情，就上591租屋網！\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fhouse\\u002F2026\\u002F06\\u002F30\\u002F178280986163103805.jpg!730x460.water2.jpg\",\"另有額外費用1340元\\u002F月\",\"二個月租金\",\"無車位\",1340,\"48,000\",\"未包含服務費\",\"https:\\u002F\\u002Fimg2.591.com.tw\\u002Fmarket\\u002F2022\\u002F01\\u002F11\\u002F164189733970115607.jpg!600x600.jpg\",\"https:\\u002F\\u002Fimg1.591.com.tw\\u002Fmarket\\u002F2023\\u002F05\\u002F22\\u002F-CjBpJgehXtuzHeiR3FCY.jpg!600x600.jpg\",\"東門\",\"28年社區\",\"67\",\"其他\",9,21708683,\"production\"))",
-    "user_rating": "none",
+    "user_rating": "dislike",
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:19",
-    "updated_at": "2026-07-31 01:22:20"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21728351",
@@ -320,7 +320,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:19",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21687029",
@@ -337,7 +337,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:19",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21689314",
@@ -388,7 +388,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-31 00:35:19",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21734412",
@@ -456,7 +456,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-30 09:53:18",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21560321",
@@ -473,7 +473,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-30 09:39:34",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21730925",
@@ -490,7 +490,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-30 09:39:34",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21734091",
@@ -507,7 +507,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-30 09:39:33",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21728014",
@@ -524,7 +524,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-30 09:39:33",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21646327",
@@ -541,7 +541,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-30 00:28:44",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21686561",
@@ -558,7 +558,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-30 00:06:07",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21726844",
@@ -575,7 +575,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-30 00:06:07",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21643080",
@@ -592,7 +592,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-30 00:06:06",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21657482",
@@ -609,7 +609,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-30 00:06:06",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21723797",
@@ -626,7 +626,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 20:57:54",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21668211",
@@ -643,7 +643,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 20:46:35",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21679009",
@@ -660,7 +660,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 20:35:15",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21659285",
@@ -677,7 +677,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 20:35:15",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:20"
   },
   {
     "house_id": "21669745",
@@ -694,7 +694,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 20:23:58",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21686780",
@@ -711,7 +711,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 20:12:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21722544",
@@ -728,7 +728,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 20:12:25",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21590675",
@@ -745,7 +745,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 20:12:25",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21693244",
@@ -762,7 +762,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 19:39:26",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "17926837",
@@ -779,7 +779,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 19:28:39",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21714929",
@@ -796,7 +796,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 18:33:30",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "14791889",
@@ -813,7 +813,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 18:22:35",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21689501",
@@ -830,7 +830,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 17:49:42",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21727984",
@@ -847,7 +847,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 17:06:16",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21636381",
@@ -864,7 +864,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 16:55:15",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21660315",
@@ -881,7 +881,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 16:21:58",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:20"
   },
   {
     "house_id": "14604157",
@@ -898,7 +898,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 16:10:48",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21597612",
@@ -915,7 +915,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 16:10:48",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21597174",
@@ -932,7 +932,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 16:10:48",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21680190",
@@ -949,7 +949,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 16:10:48",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21638850",
@@ -966,7 +966,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 16:10:48",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21621811",
@@ -983,7 +983,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 16:10:48",
-    "updated_at": "2026-07-31 01:24:52"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21714098",
@@ -1000,7 +1000,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 15:59:23",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21705787",
@@ -1017,7 +1017,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 15:59:23",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21670328",
@@ -1034,7 +1034,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 15:14:26",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21682697",
@@ -1051,7 +1051,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 15:14:26",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21662044",
@@ -1068,7 +1068,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 15:14:26",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:20"
   },
   {
     "house_id": "21719302",
@@ -1085,7 +1085,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 15:14:26",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21676135",
@@ -1102,7 +1102,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 15:14:26",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21725544",
@@ -1119,7 +1119,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 15:03:16",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21549390",
@@ -1136,7 +1136,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 15:03:16",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21655417",
@@ -1153,7 +1153,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 14:30:08",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21721983",
@@ -1170,7 +1170,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 14:30:08",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21710237",
@@ -1187,7 +1187,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 14:19:13",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21719853",
@@ -1204,7 +1204,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-29 14:08:27",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21551343",
@@ -1221,7 +1221,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 13:57:42",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21726230",
@@ -1238,7 +1238,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 13:52:58",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21681550",
@@ -1255,7 +1255,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 13:52:58",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21680591",
@@ -1272,7 +1272,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 13:52:58",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "17132446",
@@ -1289,7 +1289,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-29 13:52:58",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21726047",
@@ -1306,7 +1306,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 13:52:58",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21719513",
@@ -1323,7 +1323,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 13:52:58",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21724666",
@@ -1340,7 +1340,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 13:52:58",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21723875",
@@ -1357,7 +1357,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 05:02:45",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21725535",
@@ -1374,7 +1374,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 04:24:58",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "17127906",
@@ -1391,7 +1391,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 04:05:15",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21569411",
@@ -1408,7 +1408,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 04:05:15",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21653758",
@@ -1425,7 +1425,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21561813",
@@ -1442,7 +1442,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21641788",
@@ -1459,7 +1459,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21560690",
@@ -1476,7 +1476,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21663063",
@@ -1493,7 +1493,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:21"
   },
   {
     "house_id": "21575850",
@@ -1510,7 +1510,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21570180",
@@ -1527,7 +1527,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "19401026",
@@ -1544,7 +1544,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21669019",
@@ -1561,7 +1561,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21442833",
@@ -1578,7 +1578,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21717250",
@@ -1595,7 +1595,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21720509",
@@ -1612,7 +1612,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21441849",
@@ -1629,7 +1629,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21580263",
@@ -1646,7 +1646,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:47",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21669372",
@@ -1663,7 +1663,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:46",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21665887",
@@ -1680,7 +1680,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:46",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:22"
   },
   {
     "house_id": "21716371",
@@ -1697,7 +1697,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:46",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21715364",
@@ -1714,7 +1714,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-29 03:16:46",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21684165",
@@ -1731,7 +1731,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 17:17:45",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21635557",
@@ -1748,7 +1748,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 17:17:45",
-    "updated_at": "2026-07-31 01:24:52"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21672038",
@@ -1765,7 +1765,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 17:17:45",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21620192",
@@ -1782,7 +1782,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 17:17:45",
-    "updated_at": "2026-07-31 01:24:51"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21721231",
@@ -1799,7 +1799,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 17:17:45",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21684552",
@@ -1816,7 +1816,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 17:17:45",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21721534",
@@ -1833,7 +1833,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 17:17:45",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21665876",
@@ -1850,7 +1850,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 17:17:45",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:22"
   },
   {
     "house_id": "21665595",
@@ -1867,7 +1867,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 17:17:45",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:22"
   },
   {
     "house_id": "21717633",
@@ -1884,7 +1884,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 17:17:45",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21697453",
@@ -1901,7 +1901,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 17:09:34",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21600859",
@@ -1918,7 +1918,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:37:04",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21719121",
@@ -1935,7 +1935,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:37:04",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21721170",
@@ -1952,7 +1952,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:37:04",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21686903",
@@ -1969,7 +1969,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:37:04",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21686908",
@@ -1986,7 +1986,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:37:04",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21715227",
@@ -2003,7 +2003,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:37:04",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21674634",
@@ -2020,7 +2020,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21706971",
@@ -2037,7 +2037,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21678012",
@@ -2054,7 +2054,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21710950",
@@ -2071,7 +2071,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21655247",
@@ -2088,7 +2088,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21576465",
@@ -2105,7 +2105,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21699737",
@@ -2122,7 +2122,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21699728",
@@ -2139,7 +2139,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21684480",
@@ -2156,7 +2156,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21700385",
@@ -2173,7 +2173,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21713206",
@@ -2190,7 +2190,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21650180",
@@ -2207,7 +2207,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21657768",
@@ -2224,7 +2224,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:20"
   },
   {
     "house_id": "21539051",
@@ -2241,7 +2241,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21712275",
@@ -2258,7 +2258,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21572955",
@@ -2275,7 +2275,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21658930",
@@ -2292,7 +2292,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:20"
   },
   {
     "house_id": "21605272",
@@ -2309,7 +2309,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:50"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21637881",
@@ -2326,7 +2326,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21542513",
@@ -2343,7 +2343,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21622157",
@@ -2360,7 +2360,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:52"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21666304",
@@ -2377,7 +2377,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21689208",
@@ -2394,7 +2394,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21709899",
@@ -2411,7 +2411,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21714803",
@@ -2428,7 +2428,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21695100",
@@ -2445,7 +2445,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21705527",
@@ -2462,7 +2462,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21584259",
@@ -2479,7 +2479,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21720482",
@@ -2496,7 +2496,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21686873",
@@ -2513,7 +2513,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21589023",
@@ -2530,7 +2530,7 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21612453",
@@ -2547,7 +2547,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:50"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21717933",
@@ -2564,7 +2564,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21681648",
@@ -2581,7 +2581,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21696010",
@@ -2598,7 +2598,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21692627",
@@ -2615,7 +2615,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21678414",
@@ -2632,7 +2632,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:53"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "21620348",
@@ -2649,7 +2649,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:51"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21610119",
@@ -2666,7 +2666,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:50"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21712985",
@@ -2683,7 +2683,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   },
   {
     "house_id": "19143644",
@@ -2700,7 +2700,7 @@
     "status": "active",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:49"
+    "updated_at": "2026-07-31 01:25:19"
   },
   {
     "house_id": "21716365",
@@ -2717,6 +2717,6 @@
     "status": "off_market",
     "missing_count": 0,
     "created_at": "2026-07-28 16:23:25",
-    "updated_at": "2026-07-31 01:24:54"
+    "updated_at": "2026-07-31 01:25:23"
   }
 ]
