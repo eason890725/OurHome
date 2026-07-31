@@ -74,9 +74,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 synced_count = 0
                 changed = False
                 for hid, r in ratings.items():
-                    if db.update_house_rating(str(hid), str(r), sync_git=False):
+                    found, did_change = db.set_house_rating(str(hid), str(r))
+                    if found:
                         synced_count += 1
-                        changed = True
+                    changed = changed or did_change
+                # 只有真的有評分被改動才同步（見 app.py 同段註解）
                 if changed:
                     db.sync_backup_json()
                     invalidate_houses_cache()

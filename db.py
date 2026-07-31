@@ -401,25 +401,39 @@ class HousingDB:
         except Exception as e:
             logger.error(f"從 rentals_backup.json 還原失敗: {e}")
 
-    def update_house_rating(self, house_id: str, rating: str, sync_git: bool = True) -> bool:
-        """更新房屋的使用者評價標記 (like / neutral / dislike / none)"""
+    def set_house_rating(self, house_id: str, rating: str) -> Tuple[bool, bool]:
+        """寫入使用者評價，回傳 (是否找到該物件, 是否真的有變更)。本身不做任何同步。
+
+        **值沒變就完全不寫入**。這點很重要：儀表板每次開啟都會把 localStorage 裡的
+        評分整包 POST 回來，若照舊無條件改寫 updated_at，備份 JSON 的內容就會跟著變，
+        sync_backup_json() 的 MD5 閘門形同虛設，於是每開一次頁面就產生一個 GitHub commit。
+        """
         valid_ratings = {"like", "neutral", "dislike", "none"}
         if rating not in valid_ratings:
             rating = "none"
-        
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        hid = str(house_id)
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE houses 
-                SET user_rating = ?, updated_at = ?
-                WHERE house_id = ?
-            """, (rating, now_str, str(house_id)))
+            row = cursor.execute("SELECT user_rating FROM houses WHERE house_id = ?", (hid,)).fetchone()
+            if not row:
+                return False, False
+            if (row["user_rating"] or "none") == rating:
+                return True, False
+
+            cursor.execute(
+                "UPDATE houses SET user_rating = ?, updated_at = ? WHERE house_id = ?",
+                (rating, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), hid)
+            )
             conn.commit()
-            success = cursor.rowcount > 0
-            if success and sync_git:
-                self.sync_backup_json()
-            return success
+            return True, True
+
+    def update_house_rating(self, house_id: str, rating: str, sync_git: bool = True) -> bool:
+        """更新房屋的使用者評價標記 (like / neutral / dislike / none)。回傳是否找到該物件。"""
+        found, changed = self.set_house_rating(house_id, rating)
+        if changed and sync_git:
+            self.sync_backup_json()
+        return found
 
     # 「地址相容」路徑的門檻。地址粒度不同時只靠價格＋坪數認定，
     # 因此比標題路徑嚴格得多，避免把同一棟大樓的不同戶誤判成重複。
@@ -522,7 +536,10 @@ class HousingDB:
 
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT house_id, price, numeric_price, price_history, user_rating FROM houses WHERE house_id = ?", (house_id,))
+            cursor.execute(
+                "SELECT house_id, price, numeric_price, price_history, user_rating, status, missing_count "
+                "FROM houses WHERE house_id = ?", (house_id,)
+            )
             row = cursor.fetchone()
 
             if not row:
@@ -599,8 +616,15 @@ class HousingDB:
                         "house": updated_house
                     }
                 else:
-                    cursor.execute("UPDATE houses SET status = ?, missing_count = 0, updated_at = ? WHERE house_id = ?", (status, now_str, house_id))
-                    conn.commit()
+                    # 只有在狀態真的改變時才寫入。原本無條件改寫 updated_at，
+                    # 導致每輪巡邏的備份 JSON 內容都不同、MD5 閘門永遠攔不下來，
+                    # 每 10 分鐘就無謂地推一次 GitHub。
+                    if (row["status"] or "active") != status or (row["missing_count"] or 0) != 0:
+                        cursor.execute(
+                            "UPDATE houses SET status = ?, missing_count = 0, updated_at = ? WHERE house_id = ?",
+                            (status, now_str, house_id)
+                        )
+                        conn.commit()
                     return {"action": "IGNORE"}
 
     def process_houses_batch(self, houses_list: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:

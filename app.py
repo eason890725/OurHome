@@ -60,13 +60,16 @@ def api_sync_ratings():
         synced_count = 0
         changed = False
         for hid, r in ratings.items():
-            if db.update_house_rating(str(hid), str(r), sync_git=False):
+            found, did_change = db.set_house_rating(str(hid), str(r))
+            if found:
                 synced_count += 1
-                changed = True
+            changed = changed or did_change
+        # 只有真的有評分被改動才同步。儀表板每次開啟都會整包送回來，
+        # 若不分辨就同步，等於每開一次頁面就產生一個 GitHub commit。
         if changed:
             db.sync_backup_json()
             invalidate_houses_cache()
-        return jsonify({"success": True, "synced_count": synced_count})
+        return jsonify({"success": True, "synced_count": synced_count, "changed": changed})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 

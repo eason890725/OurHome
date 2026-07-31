@@ -160,6 +160,51 @@ check("總共嘗試了兩次 PUT", len(fake.put_calls) == 2, f"put_calls={fake.p
 check("第二次用的是重新抓的 sha", fake.put_calls[0] != fake.put_calls[1], f"{fake.put_calls}")
 check("最終成功並記錄 hash", dbmod._LAST_PUSHED_HASH != "")
 
+# ═══ 情境 6：內容沒變就不可以推 GitHub ═══
+# 實際發生過：儀表板每次開啟都會把 localStorage 的評分整包 POST 回來，
+# 而寫入端無條件改寫 updated_at，使備份 JSON 每次都不同、MD5 閘門失效，
+# 結果 24 小時內產生 1768 個 commit。
+fresh("情境6：重複寫入相同內容不可產生任何推送")
+fake.raw_mode = "ok"
+d = dbmod.HousingDB("t6.db")
+with d._get_connection() as c:
+    c.execute("INSERT INTO houses (house_id, title, user_rating, status) VALUES ('R1','房子','none','active')")
+    c.commit()
+
+d.update_house_rating("R1", "like")
+n_after_first = len(fake.put_calls)
+check("第一次設定評分會推送", n_after_first >= 1, f"{n_after_first} 次")
+
+for _ in range(5):
+    d.update_house_rating("R1", "like")          # 重複送同樣的值
+check("重複送相同評分不再產生任何推送", len(fake.put_calls) == n_after_first,
+      f"{n_after_first} -> {len(fake.put_calls)}")
+
+check("set_house_rating 正確回報未變更", d.set_house_rating("R1", "like") == (True, False))
+check("set_house_rating 正確回報有變更", d.set_house_rating("R1", "dislike") == (True, True))
+check("不存在的物件回報找不到", d.set_house_rating("NOPE", "like") == (False, False))
+
+# 巡邏路徑：狀態沒變的房源不該改寫 updated_at
+d.sync_backup_json()          # 先把上面 set_house_rating 造成的待推變更結清
+before = [r for r in d.get_all_houses() if r["house_id"] == "R1"][0]["updated_at"]
+n_before = len(fake.put_calls)
+d.process_house({"house_id": "R1", "title": "房子", "price": "20,000元/月",
+                 "address": "大安區", "size": "10坪", "status": "active"})
+after = [r for r in d.get_all_houses() if r["house_id"] == "R1"][0]["updated_at"]
+check("狀態沒變的房源不會被改寫 updated_at", before == after, f"{before} -> {after}")
+d.sync_backup_json()
+check("因此巡邏後也不會產生推送", len(fake.put_calls) == n_before,
+      f"{n_before} -> {len(fake.put_calls)}")
+
+# 但狀態真的改變時仍要寫入並推送
+d.process_house({"house_id": "R1", "title": "房子", "price": "20,000元/月",
+                 "address": "大安區", "size": "10坪", "status": "off_market"})
+row6 = [r for r in d.get_all_houses() if r["house_id"] == "R1"][0]
+check("狀態改變時確實有寫入", row6["status"] == "off_market", str(row6["status"]))
+d.sync_backup_json()
+check("狀態改變後會推送", len(fake.put_calls) > n_before,
+      f"{n_before} -> {len(fake.put_calls)}")
+
 # ═══ 情境 5：雲端回傳壞內容，不可覆蓋本地好的備份 ═══
 fresh("情境5：雲端回傳非 JSON → 不可寫壞本地既有備份")
 io.open("rentals_backup.json", "w", encoding="utf-8").write(json.dumps(CLOUD, ensure_ascii=False))
