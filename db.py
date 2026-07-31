@@ -39,6 +39,90 @@ def clean_title_tokens(title: str) -> str:
     clean = re.sub(r'(可租補|有陽台|有管理|採光佳|景觀房|優質|搶租|精選|溫馨|大套房|電梯|獨洗|代收)', '', clean)
     return clean
 
+CN_NUM = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
+          "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+
+
+def normalize_addr_text(s: str) -> str:
+    """全形轉半形、移除空白與各種分隔符，讓後續解析不受排版差異影響。"""
+    if not s:
+        return ""
+    out = []
+    for ch in str(s):
+        code = ord(ch)
+        if 0xFF10 <= code <= 0xFF19 or 0xFF21 <= code <= 0xFF5A:  # 全形數字/英文
+            out.append(chr(code - 0xFEE0))
+        else:
+            out.append(ch)
+    return re.sub(r'[\s\-–—─,，.。()（）]', '', "".join(out))
+
+
+def parse_address(address: str) -> Optional[Dict[str, Any]]:
+    """把地址拆成 city/district/road/section/lane/alley/number。
+
+    解析不出「行政區 + 路名」就回傳 None，代表這筆地址粒度太粗（例如只有「台北市中山區」），
+    不足以拿來比對，交由標題相似度處理。
+    """
+    a = normalize_addr_text(address)
+    if not a or "未提供" in a or "依現場" in a:
+        return None
+
+    parsed: Dict[str, Any] = {}
+    m = re.search(r'([一-龥]{2,3}[市縣])', a)
+    if m:
+        parsed["city"] = m.group(1)
+        a = a.replace(m.group(1), "", 1)
+
+    m = re.search(r'([一-龥]{1,3}[區鄉鎮])', a)
+    if not m:
+        return None
+    parsed["district"] = m.group(1)
+    rest = a[m.end():]
+
+    m = re.search(r'^([一-龥A-Za-z0-9]+?[路街道])', rest)
+    if not m:
+        return None
+    parsed["road"] = m.group(1)
+    rest = rest[m.end():]
+
+    # 段：同時支援「三段」與「3段」
+    m = re.search(r'^([一二三四五六七八九十\d]+)段', rest)
+    if m:
+        tok = m.group(1)
+        parsed["section"] = CN_NUM.get(tok) or (int(tok) if tok.isdigit() else None)
+        rest = rest[m.end():]
+
+    for key, pat in (("lane", r'(\d+)巷'), ("alley", r'(\d+)弄'), ("number", r'(\d+)號')):
+        m = re.search(pat, rest)
+        if m:
+            parsed[key] = int(m.group(1))
+    return parsed
+
+
+def address_verdict(addr1: str, addr2: str) -> str:
+    """比對兩個地址，回傳 conflict / compatible / unknown。
+
+    設計原則：**地址只用來「排除」，不用來「認定」**。
+    - conflict   ：區、路或段不同 → 確定不是同一間，直接否決
+    - compatible ：已知欄位都吻合，只是一邊寫得比較細
+                   （例如「內湖路一段」vs「內湖路一段49號」、「177巷」vs「177號」）
+    - unknown    ：至少一邊粒度太粗解析不出來，地址無法提供資訊
+    """
+    p1, p2 = parse_address(addr1), parse_address(addr2)
+    if p1 is None or p2 is None:
+        return "unknown"
+    if p1["district"] != p2["district"] or p1["road"] != p2["road"]:
+        return "conflict"
+    # 段：兩邊都標了才比。新生北路二段 vs 三段是不同地方。
+    if p1.get("section") and p2.get("section") and p1["section"] != p2["section"]:
+        return "conflict"
+    # 巷/弄/號：兩邊都標了才比；只有一邊標代表另一邊寫得粗，視為相容
+    for key in ("lane", "alley", "number"):
+        if key in p1 and key in p2 and p1[key] != p2[key]:
+            return "conflict"
+    return "compatible"
+
+
 def generate_address_fingerprint(address: str, size_str: str, price_str: str) -> str:
     if not address or address == "未提供地址" or "依現場" in address:
         return ""
@@ -324,51 +408,83 @@ class HousingDB:
                 self.sync_backup_json()
             return success
 
-    def is_precise_duplicate(self, new_house: dict, old_house: dict) -> bool:
-        t1, t2 = new_house.get("title", ""), old_house.get("title", "")
-        p1, p2 = new_house.get("numeric_price", 0), old_house.get("numeric_price", 0)
-        s1_str, s2_str = new_house.get("size", ""), old_house.get("size", "")
-        addr1 = (new_house.get("address") or "").replace(" ", "").replace("-", "")
-        addr2 = (old_house.get("address") or "").replace(" ", "").replace("-", "")
+    # 「地址相容」路徑的門檻。地址粒度不同時只靠價格＋坪數認定，
+    # 因此比標題路徑嚴格得多，避免把同一棟大樓的不同戶誤判成重複。
+    COMPAT_PRICE_TOLERANCE = 500
+    COMPAT_SIZE_TOLERANCE = 0.5
 
-        s1 = parse_sqft(s1_str)
-        s2 = parse_sqft(s2_str)
-        
-        if s1 > 0 and s2 > 0 and abs(s1 - s2) > 1.5:
+    def is_precise_duplicate(self, new_house: dict, old_house: dict) -> bool:
+        """判斷兩筆刊登是否為同一間房屋。
+
+        地址在這裡只扮演「否決者」：解析出行政區/路/段之後，只要任一層級衝突就直接排除
+        （例如新生北路二段 vs 三段）。認定重複則交給價格與坪數——實測顯示這兩者才有鑑別力，
+        因為不同仲介的標題充滿 emoji 與行銷詞，相似度撐不起來。
+        """
+        t1, t2 = new_house.get("title", ""), old_house.get("title", "")
+        p1 = new_house.get("numeric_price", 0) or 0
+        p2 = old_house.get("numeric_price", 0) or 0
+        addr1 = new_house.get("address") or ""
+        addr2 = old_house.get("address") or ""
+
+        s1 = parse_sqft(new_house.get("size", ""))
+        s2 = parse_sqft(old_house.get("size", ""))
+        size_diff = abs(s1 - s2) if (s1 > 0 and s2 > 0) else None
+        price_diff = abs(p1 - p2)
+
+        verdict = address_verdict(addr1, addr2)
+        if verdict == "conflict":
             return False
 
-        price_diff = abs(p1 - p2)
+        # 路徑 1：地址相容（一邊寫到門牌、一邊只寫到路段也算）+ 價格與坪數幾乎相同
+        if (verdict == "compatible"
+                and price_diff <= self.COMPAT_PRICE_TOLERANCE
+                and size_diff is not None and size_diff <= self.COMPAT_SIZE_TOLERANCE):
+            logger.info(
+                f"🔁 [地址相容去重] {addr1!r} ≈ {addr2!r}｜價差 {price_diff} 元｜坪差 {size_diff:.1f}"
+            )
+            return True
+
+        # 路徑 2：標題高度相似（沿用原有門檻；地址衝突者已在上面被擋掉）
+        if size_diff is not None and size_diff > 1.5:
+            return False
         if price_diff > 1500:
             return False
 
-        if addr1 and addr2 and "未提供" not in addr1 and "依現場" not in addr1 and addr1 == addr2:
-            if s1 > 0 and s2 > 0 and abs(s1 - s2) <= 0.5:
-                logger.info(f"🔁 [相同地址坪數去重] 命中相同地址 ({addr1}) 坪數 ({s1}坪 vs {s2}坪) 重複物件")
-                return True
-
-        t1_clean = clean_title_tokens(t1)
-        t2_clean = clean_title_tokens(t2)
-        ratio = SequenceMatcher(None, t1_clean, t2_clean).ratio()
-
+        ratio = SequenceMatcher(None, clean_title_tokens(t1), clean_title_tokens(t2)).ratio()
         agency_match = ("美樂" in t1 and "美樂" in t2) or ("寄居蟹" in t1 and "寄居蟹" in t2)
-        if agency_match and ratio > 0.60:
-            return True
-
-        if ratio > 0.70:
+        if (agency_match and ratio > 0.60) or ratio > 0.70:
+            logger.info(f"🔁 [標題相似去重] 相似度 {ratio:.2f}｜{t1[:20]!r} ≈ {t2[:20]!r}")
             return True
 
         return False
 
+    # 去重比對的回溯上限。原本寫死 200，資料量一超過就會無聲地漏掉較舊的重複刊登。
+    # is_precise_duplicate() 會先做便宜的地址否決，絕大多數配對在跑到 SequenceMatcher
+    # 之前就被排除，因此這個數字可以放大。
+    DEDUP_SCAN_LIMIT = 2000
+
     def is_fuzzy_duplicate_property(self, house_data: dict) -> bool:
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT house_id, title, numeric_price, size, address FROM houses ORDER BY created_at DESC LIMIT 200")
+            cursor.execute(
+                "SELECT house_id, title, numeric_price, size, address FROM houses "
+                "ORDER BY created_at DESC LIMIT ?", (self.DEDUP_SCAN_LIMIT,)
+            )
             rows = cursor.fetchall()
-            
+
+            if len(rows) == self.DEDUP_SCAN_LIMIT:
+                logger.warning(
+                    f"⚠️ 去重比對已達回溯上限 {self.DEDUP_SCAN_LIMIT} 筆，"
+                    f"更舊的物件不會被比對到，請考慮調高 DEDUP_SCAN_LIMIT。"
+                )
+
             for row in rows:
-                old_h = dict(row)
-                if self.is_precise_duplicate(house_data, old_h):
-                    logger.info(f"🔁 [精準去重] 辨識出重複刊登物件: [{house_data.get('title')[:20]}] (與 ID: {row['house_id']} {row['title'][:20]} 重複)")
+                if self.is_precise_duplicate(house_data, dict(row)):
+                    logger.info(
+                        f"🔁 [去重] 略過重複刊登: [{house_data.get('house_id')}] "
+                        f"{(house_data.get('title') or '')[:20]} "
+                        f"← 與既有 [{row['house_id']}] {(row['title'] or '')[:20]} 為同一物件"
+                    )
                     return True
 
         return False

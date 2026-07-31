@@ -7,9 +7,17 @@
 """
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
+
+
+def _force_remove(func, path, exc_info):
+    """Windows 上 .git/objects 內的檔案是唯讀的，rmtree 會 PermissionError。
+    清掉唯讀旗標再刪一次。"""
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOK_SRC = os.path.join(ROOT, ".githooks", "pre-commit")
@@ -39,7 +47,7 @@ if not os.path.exists(HOOK_SRC):
     sys.exit(1)
 
 if os.path.exists(REPO):
-    shutil.rmtree(REPO)
+    shutil.rmtree(REPO, onerror=_force_remove)
 os.makedirs(os.path.join(REPO, ".githooks"))
 
 git("init", "-q")
