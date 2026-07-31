@@ -196,6 +196,10 @@ class HousingDB:
                 cursor.execute("ALTER TABLE houses ADD COLUMN missing_count INTEGER DEFAULT 0")
             if "updated_at" not in columns:
                 cursor.execute("ALTER TABLE houses ADD COLUMN updated_at TIMESTAMP")
+            # 重複刊登指向的主物件 house_id。NULL 代表它自己就是主物件。
+            # 刻意「標記」而非「丟棄」：誤判時資料還在，儀表板展開就看得到。
+            if "duplicate_of" not in columns:
+                cursor.execute("ALTER TABLE houses ADD COLUMN duplicate_of TEXT")
 
             conn.commit()
             
@@ -435,8 +439,14 @@ class HousingDB:
             self.sync_backup_json()
         return found
 
-    # 「地址相容」路徑的門檻。地址粒度不同時只靠價格＋坪數認定，
-    # 因此比標題路徑嚴格得多，避免把同一棟大樓的不同戶誤判成重複。
+    # 「地址相容」路徑的門檻，依價格接近程度分兩級。
+    #
+    # 同一間房被不同仲介刊登時，坪數常常對不起來——有人寫權狀坪、有人寫室內坪，
+    # 實際觀察到同一間房出現 8.2 坪與 9 坪兩種寫法。因此當租金幾乎完全一致時
+    # （價差 <= 200 元，這種巧合在不同物件上很罕見），坪數容忍度放寬到 1.5 坪。
+    # 租金只是接近而非幾乎相同時，仍維持 0.5 坪的嚴格門檻。
+    SAME_PRICE_TOLERANCE = 200
+    SAME_PRICE_SIZE_TOLERANCE = 1.5
     COMPAT_PRICE_TOLERANCE = 500
     COMPAT_SIZE_TOLERANCE = 0.5
 
@@ -462,14 +472,17 @@ class HousingDB:
         if verdict == "conflict":
             return False
 
-        # 路徑 1：地址相容（一邊寫到門牌、一邊只寫到路段也算）+ 價格與坪數幾乎相同
-        if (verdict == "compatible"
-                and price_diff <= self.COMPAT_PRICE_TOLERANCE
-                and size_diff is not None and size_diff <= self.COMPAT_SIZE_TOLERANCE):
-            logger.info(
-                f"🔁 [地址相容去重] {addr1!r} ≈ {addr2!r}｜價差 {price_diff} 元｜坪差 {size_diff:.1f}"
-            )
-            return True
+        # 路徑 1：地址相容（一邊寫到門牌、一邊只寫到路段也算）+ 價格與坪數相符
+        if verdict == "compatible" and size_diff is not None:
+            same_price = (price_diff <= self.SAME_PRICE_TOLERANCE
+                          and size_diff <= self.SAME_PRICE_SIZE_TOLERANCE)
+            close_price = (price_diff <= self.COMPAT_PRICE_TOLERANCE
+                           and size_diff <= self.COMPAT_SIZE_TOLERANCE)
+            if same_price or close_price:
+                logger.info(
+                    f"🔁 [地址相容去重] {addr1!r} ≈ {addr2!r}｜價差 {price_diff} 元｜坪差 {size_diff:.1f}"
+                )
+                return True
 
         # 路徑 2：標題高度相似（沿用原有門檻；地址衝突者已在上面被擋掉）
         if size_diff is not None and size_diff > 1.5:
@@ -490,12 +503,19 @@ class HousingDB:
     # 之前就被排除，因此這個數字可以放大。
     DEDUP_SCAN_LIMIT = 2000
 
-    def is_fuzzy_duplicate_property(self, house_data: dict) -> bool:
+    def find_duplicate_of(self, house_data: dict) -> Optional[str]:
+        """找出這筆房源是哪個既有物件的重複刊登，回傳主物件的 house_id。
+
+        只比對「本身不是重複刊登」的物件，讓重複群always指向同一個主物件，
+        不會形成 A→B→C 的鏈。
+        """
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT house_id, title, numeric_price, size, address FROM houses "
-                "ORDER BY created_at DESC LIMIT ?", (self.DEDUP_SCAN_LIMIT,)
+                "WHERE duplicate_of IS NULL AND house_id != ? "
+                "ORDER BY created_at ASC LIMIT ?",
+                (str(house_data.get("house_id", "")), self.DEDUP_SCAN_LIMIT)
             )
             rows = cursor.fetchall()
 
@@ -507,14 +527,55 @@ class HousingDB:
 
             for row in rows:
                 if self.is_precise_duplicate(house_data, dict(row)):
-                    logger.info(
-                        f"🔁 [去重] 略過重複刊登: [{house_data.get('house_id')}] "
-                        f"{(house_data.get('title') or '')[:20]} "
-                        f"← 與既有 [{row['house_id']}] {(row['title'] or '')[:20]} 為同一物件"
-                    )
-                    return True
+                    return str(row["house_id"])
+        return None
 
-        return False
+    def dedupe_existing(self) -> int:
+        """回頭掃描既有資料，把重複刊登標記到主物件上，回傳新標記的筆數。
+
+        去重原本只在物件「第一次被抓到」時才執行，因此在演算法調整之前就已經
+        進到資料庫的重複刊登永遠不會被處理。每輪巡邏跑一次這個，讓既有資料也能收斂。
+
+        以最早建立的為主物件（created_at 較早者保留），避免主從關係隨掃描順序跳動。
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            rows = [dict(r) for r in cursor.execute(
+                "SELECT house_id, title, numeric_price, size, address, duplicate_of "
+                "FROM houses ORDER BY created_at ASC LIMIT ?", (self.DEDUP_SCAN_LIMIT,)
+            ).fetchall()]
+
+            primaries: List[Dict[str, Any]] = []
+            marked = 0
+            for h in rows:
+                hit = None
+                for p in primaries:
+                    if self.is_precise_duplicate(h, p):
+                        hit = p
+                        break
+                if hit is None:
+                    primaries.append(h)
+                    # 原本被標記成重複、但重新判定後已不是的，要解除標記
+                    if h.get("duplicate_of"):
+                        cursor.execute("UPDATE houses SET duplicate_of = NULL WHERE house_id = ?",
+                                       (h["house_id"],))
+                        logger.info(f"↩️ [去重] 解除誤標: [{h['house_id']}] {(h.get('title') or '')[:20]}")
+                    continue
+
+                if h.get("duplicate_of") == hit["house_id"]:
+                    continue           # 已經標好了
+                cursor.execute("UPDATE houses SET duplicate_of = ? WHERE house_id = ?",
+                               (hit["house_id"], h["house_id"]))
+                marked += 1
+                logger.info(
+                    f"🔁 [去重] 標記重複刊登: [{h['house_id']}] {(h.get('title') or '')[:18]} "
+                    f"→ 主物件 [{hit['house_id']}] {(hit.get('title') or '')[:18]}"
+                )
+            conn.commit()
+
+        if marked:
+            logger.info(f"🔁 本次共標記 {marked} 筆重複刊登")
+        return marked
 
     def process_house(self, house_data: Dict[str, Any]) -> Dict[str, Any]:
         house_id = str(house_data.get("house_id", ""))
@@ -543,16 +604,22 @@ class HousingDB:
             row = cursor.fetchone()
 
             if not row:
-                if self.is_fuzzy_duplicate_property(house_data):
-                    return {"action": "IGNORE"}
+                # 重複刊登照樣入庫，只是標記指向主物件。
+                # 直接丟棄的話，一旦誤判就再也看不到那筆房源，而且無從察覺。
+                dup_of = self.find_duplicate_of(house_data)
+                if dup_of:
+                    logger.info(
+                        f"🔁 [去重] 新物件為重複刊登: [{house_id}] {title[:18]} "
+                        f"→ 主物件 [{dup_of}]"
+                    )
 
                 initial_history = json.dumps([
                     {"price": current_price_str, "numeric": current_numeric_price, "time": now_str}
                 ], ensure_ascii=False)
 
                 cursor.execute("""
-                    INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, user_rating, status, missing_count, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, user_rating, status, missing_count, duplicate_of, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     house_id,
                     title,
@@ -567,10 +634,16 @@ class HousingDB:
                     'none',
                     status,
                     0,
+                    dup_of,
                     now_str,
                     now_str
                 ))
                 conn.commit()
+
+                if dup_of:
+                    # 重複刊登不發 Discord 通知，否則同一間房會通知好幾次
+                    return {"action": "DUPLICATE", "house": house_data}
+
                 logger.info(f"記錄全新不重複房屋物件: [{house_id}] {title}")
                 return {"action": "NEW", "house": house_data}
 
@@ -640,6 +713,13 @@ class HousingDB:
             elif res["action"] == "PRICE_DROP":
                 results["price_drop_houses"].append(res["house"])
         
+        # 回頭處理既有資料：演算法調整前就已入庫的重複刊登，
+        # 不會因為「只在新物件時檢查」而永遠留在列表上。
+        try:
+            self.dedupe_existing()
+        except Exception as e:
+            logger.error(f"既有資料去重失敗（不影響巡邏）: {e}")
+
         self.sync_backup_json()
         self.checkpoint_wal()
         return results

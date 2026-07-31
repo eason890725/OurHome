@@ -111,6 +111,40 @@ def annotate_market(house: Dict[str, Any], baseline: Dict[str, float]) -> Option
     }
 
 
+def collapse_duplicates(houses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """把標記為重複刊登的房源收進主物件底下，只回傳主物件。
+
+    重複的那幾筆不會被刪掉，而是掛在主物件的 `duplicates` 欄位裡，
+    儀表板上顯示成「🔁 另有 N 筆相同刊登」並可展開，誤判時看得到也點得進去。
+    """
+    by_id = {str(h.get("house_id")): h for h in houses}
+    primaries: List[Dict[str, Any]] = []
+
+    for h in houses:
+        h.setdefault("duplicates", [])
+
+    for h in houses:
+        dup_of = h.get("duplicate_of")
+        parent = by_id.get(str(dup_of)) if dup_of else None
+        if parent is not None and parent is not h:
+            parent.setdefault("duplicates", []).append({
+                "house_id": h.get("house_id"),
+                "title": h.get("title"),
+                "price": h.get("price"),
+                "size": h.get("size"),
+                "address": h.get("address"),
+                "link": h.get("link"),
+                "status": h.get("status"),
+                # 評分一定要帶上來，否則使用者標過的紀錄會隨著收合一起消失
+                "user_rating": h.get("user_rating") or "none",
+            })
+        else:
+            # 主物件；主物件不存在（例如已被清掉）時，這筆自己升為主物件
+            primaries.append(h)
+
+    return primaries
+
+
 def annotate_price_drop(house: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """從 price_history 整理出降價資訊。沒降過價就回傳 None。
 
@@ -178,6 +212,8 @@ def get_formatted_houses(db, scraper):
     baseline = build_market_baseline(houses)
     for h in houses:
         h["market"] = annotate_market(h, baseline)
+
+    houses = collapse_duplicates(houses)
 
     _HOUSES_CACHE = houses
     _CACHE_LAST_UPDATE = now
@@ -359,6 +395,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .commute-fast { background:rgba(16,185,129,0.14); color:#6ee7b7; border-color:rgba(16,185,129,0.3); }
         .commute-slow { background:rgba(249,115,22,0.12); color:#fb923c; border-color:rgba(249,115,22,0.3); }
         .commute-note { font-size:0.68rem; color:var(--text-dim); margin-top:4px; opacity:0.75; }
+
+        /* 重複刊登 */
+        .dup-block { margin-top:10px; }
+        .dup-toggle { width:100%; text-align:left; cursor:pointer; padding:6px 10px; border-radius:8px;
+                      font-size:0.76rem; font-weight:600; font-family:inherit;
+                      background:rgba(168,85,247,0.12); color:#c4b5fd;
+                      border:1px solid rgba(168,85,247,0.3); }
+        .dup-toggle:hover { background:rgba(168,85,247,0.2); }
+        .dup-list { margin-top:6px; padding:8px 10px; border-radius:8px; background:rgba(15,23,42,0.5);
+                    border:1px solid rgba(148,163,184,0.15); }
+        .dup-item { padding:5px 0; border-bottom:1px solid rgba(148,163,184,0.1); font-size:0.74rem; }
+        .dup-item:last-child { border-bottom:none; }
+        .dup-item a { color:#93c5fd; text-decoration:none; font-weight:600; display:block; }
+        .dup-item a:hover { text-decoration:underline; }
+        .dup-item span { color:var(--text-dim); font-size:0.7rem; }
+        .dup-rating { color:#fbbf24; margin-left:6px; }
 
         .house-card:hover {
             transform: translateY(-3px); border-color: rgba(56, 189, 248, 0.4);
@@ -823,6 +875,41 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="commute-note">通勤為路網估算（每站 2 分、轉乘 5 分、步行 5 分），非實際時刻表</div>`;
         }
 
+        function toggleDuplicates(houseId) {
+            const el = document.getElementById('dups-' + houseId);
+            if (el) el.style.display = (el.style.display === 'none' ? 'block' : 'none');
+        }
+
+        const RATING_ICON = { like: '❤️ 喜歡', neutral: '😐 普通', dislike: '💔 不喜歡' };
+
+        function renderDuplicates(h) {
+            const dups = h.duplicates || [];
+            if (!dups.length) return '';
+
+            const rows = dups.map(d => {
+                const r = RATING_ICON[d.user_rating] || '';
+                return `
+                <div class="dup-item">
+                    <a href="${esc(d.link)}" target="_blank" rel="noopener noreferrer">${esc(d.title)}</a>
+                    <span>${esc(d.price)} ・ ${esc(d.size)} ・ ${esc(d.address)} ・ ID ${esc(d.house_id)}
+                        ${r ? `<b class="dup-rating">${r}</b>` : ''}</span>
+                </div>`;
+            }).join('');
+
+            // 收合的那幾筆若有評分，一定要在收合狀態下就看得到，否則等於評分憑空消失
+            const rated = dups.filter(d => d.user_rating && d.user_rating !== 'none');
+            const hint = rated.length
+                ? `，其中 ${rated.map(d => RATING_ICON[d.user_rating]).join('、')}`
+                : '';
+            return `
+                <div class="dup-block">
+                    <button class="dup-toggle" onclick="toggleDuplicates('${esc(h.house_id)}')">
+                        🔁 另有 ${dups.length} 筆相同刊登${hint}（點擊展開）
+                    </button>
+                    <div class="dup-list" id="dups-${esc(h.house_id)}" style="display:none;">${rows}</div>
+                </div>`;
+        }
+
         function renderGrid(houses) {
             const container = document.getElementById('listingsContainer');
             if (houses.length === 0) {
@@ -867,6 +954,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                             </div>
                         </div>
                         ${renderCommute(h.commute)}
+                        ${renderDuplicates(h)}
                         <div class="tags-section">
                             ${warnings.map(w => `<div class="tag-warning">${esc(w)}</div>`).join('')}
                             <div>

@@ -7,12 +7,22 @@
 比漏抓更難察覺。
 """
 import os
+import shutil
 import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-os.chdir(tempfile.gettempdir())
+
+# 必須在 import db 之前設定：db 模組在 import 當下就會讀取 GITHUB_REPO，
+# 設成空字串才會進入純本機模式，測試才不會去下載雲端的真實資料。
+os.environ["GITHUB_REPO"] = ""
+os.environ.pop("GITHUB_TOKEN", None)
+
+BOX = os.path.join(tempfile.gettempdir(), "ourhome_dedup_test")
+shutil.rmtree(BOX, ignore_errors=True)
+os.makedirs(BOX)
+os.chdir(BOX)
 
 from db import HousingDB, address_verdict, parse_address  # noqa: E402
 
@@ -95,12 +105,31 @@ real_distinct = [
     ("民生東路一段同路段但價差 10,000",
      h("🐣雙連電梯樓中樓/獨立門牌/雙連站5分鐘🐣", 30000, "9坪", "中山區民生東路一段"),
      h("住商林小姐🍎高樓面公園可租補大套房", 20000, "8.7坪", "中山區民生東路一段")),
-    ("內湖路一段同價，但坪數差 0.8 坪",
-     h("超值大套房、可雙租補、垃圾代收、可貓、劍南路站", 24000, "9坪", "內湖區內湖路一段"),
-     h("🧸劍南路捷運✅可租補/可寵/獨洗🔥垃圾代收/電梯美宅", 24000, "8.2坪", "內湖區內湖路一段")),
 ]
 for label, a, b in real_distinct:
     check(label, db.is_precise_duplicate(a, b) is False)
+
+# ── 租金幾乎一致時，坪數容忍度放寬 ──
+# 同一間房被不同仲介刊登時坪數常對不起來（權狀坪 vs 室內坪）。
+# 使用者確認下列三筆是同一間房，實際刊登坪數為 9 / 8.2 / 8.2。
+print("\n── 同價不同坪數（使用者確認為同一間房）──")
+check("價差 0、坪差 0.8 判定為重複",
+      db.is_precise_duplicate(
+          h("超值大套房、可雙租補、垃圾代收、可貓、劍南路站", 24000, "9坪", "內湖區內湖路一段"),
+          h("劍南捷運美麗華商圈雅緻電梯大套房可租補", 24000, "8.2坪", "內湖區內湖路一段49號")) is True)
+check("價差 0、坪差 1.5 仍判定為重複",
+      db.is_precise_duplicate(
+          h("A房", 28000, "12坪", "中正區杭州南路一段143巷"),
+          h("B房", 28000, "13.5坪", "中正區杭州南路一段")) is True)
+check("價差 0、但坪差 2.0 超出容忍範圍",
+      db.is_precise_duplicate(
+          h("A房", 24000, "9坪", "內湖區內湖路一段"),
+          h("B房", 24000, "11坪", "內湖區內湖路一段")) is False)
+# 放寬只適用於「租金幾乎完全一致」，價差稍大時仍維持嚴格門檻
+check("價差 400 時坪差 0.8 不算重複（僅價格幾乎相同才放寬）",
+      db.is_precise_duplicate(
+          h("A房", 24000, "9坪", "內湖區內湖路一段"),
+          h("B房", 24400, "8.2坪", "內湖區內湖路一段")) is False)
 
 # ── 舊有的標題相似度路徑不能壞掉 ──
 print("\n── 標題相似度路徑（回歸）──")
@@ -112,6 +141,49 @@ check("標題不像就不判為重複",
       db.is_precise_duplicate(
           h("大安區溫馨獨立套房近捷運", 20000, "10坪", "台北市大安區"),
           h("內湖科學園區全新兩房一廳", 20000, "10坪", "台北市內湖區")) is False)
+
+# ── 標記而非丟棄：重複刊登仍要入庫，且收合時不可弄丟評分 ──
+print("\n── 重複刊登以「標記」處理 ──")
+import ui_shared  # noqa: E402
+
+live = HousingDB(os.path.join(BOX, "mark.db"))
+primary = {"house_id": "P1", "title": "劍南捷運美麗華商圈雅緻電梯大套房可租補",
+           "price": "24,000元/月", "address": "內湖區內湖路一段49號", "size": "8.2坪", "status": "active"}
+dup = {"house_id": "D1", "title": "超值大套房、可雙租補、垃圾代收、可貓、劍南路站",
+       "price": "24,000元/月", "address": "內湖區內湖路一段", "size": "9坪", "status": "active"}
+
+r1 = live.process_house(primary)
+r2 = live.process_house(dup)
+check("主物件視為全新物件", r1["action"] == "NEW", r1["action"])
+check("重複刊登回報 DUPLICATE（不發 Discord 通知）", r2["action"] == "DUPLICATE", r2["action"])
+
+rows = {r["house_id"]: r for r in live.get_all_houses()}
+check("重複刊登仍然有入庫（不是被丟棄）", "D1" in rows)
+check("重複刊登指向主物件", rows["D1"]["duplicate_of"] == "P1", str(rows["D1"]["duplicate_of"]))
+check("主物件本身不是重複", rows["P1"]["duplicate_of"] is None)
+
+# 使用者對「被收合的那筆」評分後，評分不可從畫面上消失
+live.update_house_rating("D1", "dislike", sync_git=False)
+collapsed = ui_shared.collapse_duplicates(live.get_all_houses())
+check("列表只剩主物件", len(collapsed) == 1, f"{len(collapsed)} 筆")
+check("重複刊登掛在主物件底下", len(collapsed[0]["duplicates"]) == 1)
+check("收合的那筆有帶著評分",
+      collapsed[0]["duplicates"][0]["user_rating"] == "dislike",
+      str(collapsed[0]["duplicates"][0].get("user_rating")))
+
+# 回頭掃描既有資料：演算法調整前就入庫的重複也要能被標記
+with live._get_connection() as c:
+    c.execute("""INSERT INTO houses (house_id,title,price,numeric_price,address,size,status,created_at)
+                 VALUES ('D2','獨立陽台~可養貓貓房~申請雙租屋補助','24,000元/月',24000,
+                         '內湖區內湖路一段','8.2坪','active','2030-01-01 00:00:00')""")
+    c.commit()
+check("直接寫入的重複尚未被標記",
+      {r["house_id"]: r for r in live.get_all_houses()}["D2"]["duplicate_of"] is None)
+marked = live.dedupe_existing()
+check("dedupe_existing 有標記到它", marked >= 1, f"{marked} 筆")
+check("D2 已指向主物件",
+      {r["house_id"]: r for r in live.get_all_houses()}["D2"]["duplicate_of"] == "P1")
+check("重複執行不會重複標記", live.dedupe_existing() == 0)
 
 print("\n" + ("去重測試全部通過 ✅" if not failures else f"失敗 {len(failures)} 項 ❌: {failures}"))
 sys.exit(1 if failures else 0)
