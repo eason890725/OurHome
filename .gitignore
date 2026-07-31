@@ -1,9 +1,16 @@
-# SQLite 暫存資料庫
+# SQLite 資料庫與 WAL 模式的附屬檔 (*.db 不會 match .db-wal / .db-shm，必須另外列)
 rentals.db
 *.db
+*.db-wal
+*.db-shm
+*.db-journal
 
-# 雲端自動同步 JSON 備份檔 (避免本機 git commit 覆蓋雲端最新紀錄)
-rentals_backup.json
+# ⚠️ rentals_backup.json 「必須」保持被 git 追蹤，不可加進本清單。
+# 它是整套系統的 Master DB：Render 雲端透過 GitHub API 寫入它，
+# 所有節點開機時再從 raw.githubusercontent.com 下載它還原 SQLite。
+# 一旦 untrack 並 commit，該檔會從 GitHub repo 上被刪除，雲端資料庫等同全毀。
+# 防止本地舊資料覆蓋雲端的機制在 main.py 的 auto_git_pull()：
+# 每次巡邏前先 `git checkout -- rentals_backup.json` 丟棄本地變更，再 git pull。
 rentals_backup.json.tmp
 
 # Python 暫存

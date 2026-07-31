@@ -51,6 +51,10 @@ def generate_address_fingerprint(address: str, size_str: str, price_str: str) ->
 class HousingDB:
     def __init__(self, db_path: str = "rentals.db"):
         self.db_path = db_path
+        # 是否成功讀到雲端 Master 備份。False 時一律禁止回推，
+        # 避免「開機讀取失敗 → DB 是空的 → 把空資料推上去蓋掉正確版本」。
+        # 必須在 _init_db() 之前設定，因為 _init_db() 結尾會呼叫 restore_from_backup_json()。
+        self._master_loaded = False
         self._init_db()
 
     def _get_connection(self) -> sqlite3.Connection:
@@ -111,92 +115,153 @@ class HousingDB:
         self.restore_from_backup_json()
 
     def sync_backup_json(self, force_push: bool = False):
-        """僅在 DB 內容實質變更 (Hash 改變) 時，才寫入硬碟並呼叫 GitHub API"""
+        """僅在 DB 內容實質變更 (Hash 改變) 時，才寫入硬碟並呼叫 GitHub API。
+
+        兩道資料安全防線：
+        1. 未成功讀到雲端 Master 前禁止回推（先嘗試補讀一次，補讀成功才放行）。
+        2. `_LAST_PUSHED_HASH` 只在「確定推送成功」後才更新，
+           否則推送失敗會被永久記成已推送，直到 DB 內容再次變動才重試。
+        """
         global _LAST_PUSHED_HASH
         houses = self.get_all_houses()
         if not houses:
             return
+
+        # 防線 1：開機時沒讀到雲端主檔就不准推。先補讀一次，成功了才繼續。
+        if not self._master_loaded:
+            logger.warning("⚠️ 尚未成功讀取雲端 Master 備份，先嘗試補讀後再決定是否回推...")
+            self.restore_from_backup_json()
+            if not self._master_loaded:
+                logger.error("🛑 仍讀不到雲端 Master 備份，本次「不」回推，避免以不完整資料覆蓋雲端。")
+                return
+            houses = self.get_all_houses()  # 補讀可能還原了資料，重新取得
+
         try:
             json_bytes = json.dumps(houses, ensure_ascii=False, indent=2).encode("utf-8")
             current_hash = hashlib.md5(json_bytes).hexdigest()
-            
+
             # 若 Hash 沒有變更且非強制，直接跳過 (完全不寫硬碟也不呼叫 API)
             if not force_push and current_hash == _LAST_PUSHED_HASH:
                 return
-
-            _LAST_PUSHED_HASH = current_hash
 
             tmp_file = "rentals_backup.json.tmp"
             with open(tmp_file, "wb") as f:
                 f.write(json_bytes)
             os.replace(tmp_file, "rentals_backup.json")
-            
+
             token = os.environ.get("GITHUB_TOKEN")
-            if token:
-                self._push_to_github_api(token, json_bytes)
+            if not token:
+                # 本地無 token，不會推 GitHub；標記 hash 只是避免重複寫同樣的檔案
+                _LAST_PUSHED_HASH = current_hash
+                return
 
-        except Exception as e:
-            logger.debug(f"同步 rentals_backup.json 失敗: {e}")
-
-    def _push_to_github_api(self, token: str, json_bytes: bytes):
-        """透由 GitHub REST API 自動 Commit 並 Push 最新備份至 GitHub 儲存庫"""
-        try:
-            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
-            headers = {
-                "Authorization": f"token {token}",
-                "Accept": "application/vnd.github.v3+json"
-            }
-            
-            sha = ""
-            get_resp = requests.get(url, headers=headers, timeout=5)
-            if get_resp.status_code == 200:
-                sha = get_resp.json().get("sha", "")
-
-            content_b64 = base64.b64encode(json_bytes).decode("utf-8")
-            payload = {
-                "message": f"data: auto-sync rentals_backup.json ({len(json.loads(json_bytes.decode('utf-8')))} items) from Render cloud [skip ci]",
-                "content": content_b64,
-                "branch": "main"
-            }
-            if sha:
-                payload["sha"] = sha
-
-            put_resp = requests.put(url, headers=headers, json=payload, timeout=8)
-            if put_resp.status_code in (200, 201):
-                logger.info(f"✨ [GitHub API 雙向全自動同步成功] 已把 Render 最新 {len(json.loads(json_bytes.decode('utf-8')))} 筆 DB 寫回 GitHub！")
+            # 防線 2：推成功才記錄 hash，失敗就維持舊值讓下次自動重試
+            if self._push_to_github_api(token, json_bytes):
+                _LAST_PUSHED_HASH = current_hash
             else:
-                logger.debug(f"GitHub API 同步提示: {put_resp.status_code} - {put_resp.text}")
+                logger.warning("⚠️ 本次 GitHub 回推未成功，保留舊 hash，下次同步會自動重試。")
 
         except Exception as e:
-            logger.debug(f"GitHub API 雙向同步異常: {e}")
+            logger.error(f"同步 rentals_backup.json 失敗: {e}")
+
+    def _push_to_github_api(self, token: str, json_bytes: bytes) -> bool:
+        """透由 GitHub REST API 自動 Commit 並 Push 最新備份至 GitHub 儲存庫。
+
+        回傳 True 代表確定寫入成功 (HTTP 200/201)。
+        遇到 409/422 (sha 過期，代表推送期間檔案被別人改過) 會重抓 sha 再試一次。
+        """
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
+        headers = {
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        item_count = len(json.loads(json_bytes.decode("utf-8")))
+        content_b64 = base64.b64encode(json_bytes).decode("utf-8")
+
+        def _current_sha() -> str:
+            try:
+                get_resp = requests.get(url, headers=headers, timeout=5)
+                if get_resp.status_code == 200:
+                    return get_resp.json().get("sha", "")
+            except Exception as e:
+                logger.warning(f"取得 GitHub 現行 sha 失敗: {e}")
+            return ""
+
+        for attempt in (1, 2):
+            try:
+                payload = {
+                    "message": f"data: auto-sync rentals_backup.json ({item_count} items) from Render cloud [skip ci]",
+                    "content": content_b64,
+                    "branch": "main"
+                }
+                sha = _current_sha()
+                if sha:
+                    payload["sha"] = sha
+
+                put_resp = requests.put(url, headers=headers, json=payload, timeout=8)
+                if put_resp.status_code in (200, 201):
+                    logger.info(f"✨ [GitHub API 雙向全自動同步成功] 已把 Render 最新 {item_count} 筆 DB 寫回 GitHub！")
+                    return True
+
+                if put_resp.status_code in (409, 422) and attempt == 1:
+                    logger.warning(f"GitHub 回推遇到 sha 衝突 (HTTP {put_resp.status_code})，重抓 sha 後重試...")
+                    continue
+
+                logger.error(f"❌ GitHub API 回推失敗: HTTP {put_resp.status_code} - {put_resp.text[:300]}")
+                return False
+
+            except Exception as e:
+                logger.error(f"❌ GitHub API 回推異常 (第 {attempt} 次): {e}")
+                if attempt == 1:
+                    continue
+                return False
+
+        return False
 
     def restore_from_backup_json(self):
-        """優先從 GitHub REST API / Raw 下載最新雲端 rentals_backup.json 並自動還原至 SQLite 資料庫"""
+        """優先從 GitHub REST API / Raw 下載最新雲端 rentals_backup.json 並自動還原至 SQLite 資料庫。
+
+        成功讀到「可解析且非空」的主檔時才會把 self._master_loaded 設為 True；
+        沒設起來的話 sync_backup_json() 會拒絕回推，防止空資料覆蓋雲端。
+        """
+        downloaded = False
         try:
             raw_url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{GITHUB_FILE_PATH}"
             headers = {"User-Agent": "Mozilla/5.0"}
             token = os.environ.get("GITHUB_TOKEN")
             if token:
                 headers["Authorization"] = f"token {token}"
-            
+
             resp = requests.get(raw_url, headers=headers, timeout=8)
             if resp.status_code == 200 and resp.text.strip():
+                # 先確認下載內容真的是合法 JSON，再覆蓋本地主檔，
+                # 避免收到半截或錯誤頁面時把好的本地備份寫壞。
+                json.loads(sanitize_text(resp.text))
                 with open("rentals_backup.json", "w", encoding="utf-8") as f:
                     f.write(resp.text)
+                downloaded = True
+            else:
+                logger.warning(f"⚠️ 下載雲端 Master 備份未成功: HTTP {resp.status_code}")
         except Exception as e:
-            logger.debug(f"下載雲端 rentals_backup.json 提示: {e}")
+            logger.warning(f"⚠️ 下載雲端 Master 備份失敗，改用本地既有備份: {e}")
 
         if not os.path.exists("rentals_backup.json"):
+            logger.error("🛑 雲端下載失敗且本地無 rentals_backup.json，無法確認 Master 內容。")
             return
         try:
             with open("rentals_backup.json", "r", encoding="utf-8") as f:
                 raw_content = f.read()
-            
+
             cleaned_content = sanitize_text(raw_content)
             houses = json.loads(cleaned_content)
             if not houses:
+                logger.warning("⚠️ Master 備份可解析但內容為空，不視為讀取成功。")
                 return
-            
+
+            # 到這裡代表確實拿到一份可用的 Master，放行回推
+            self._master_loaded = True
+            logger.info(f"📥 已載入 Master 備份 ({len(houses)} 筆，來源: {'GitHub 雲端' if downloaded else '本地既有檔案'})")
+
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 restored_count = 0
@@ -423,7 +488,22 @@ class HousingDB:
                 results["price_drop_houses"].append(res["house"])
         
         self.sync_backup_json()
+        self.checkpoint_wal()
         return results
+
+    def checkpoint_wal(self):
+        """把 WAL 內容併回主資料庫並截斷 WAL 檔。
+
+        WAL 模式下 SQLite 只會重複使用 -wal 檔的空間、不會自動縮小它，
+        長期執行下來 rentals.db-wal 會停在歷史高水位 (曾觀察到 4.8MB)。
+        TRUNCATE 模式的 checkpoint 會把它歸零。若當下有其他連線正在讀取
+        會回傳 busy，此時安靜跳過即可，下一輪巡邏再試。
+        """
+        try:
+            with self._get_connection() as conn:
+                conn.execute("PRAGMA wal_checkpoint(TRUNCATE);")
+        except Exception as e:
+            logger.debug(f"WAL checkpoint 跳過 (可能有其他連線佔用): {e}")
 
     def get_all_houses(self) -> List[Dict[str, Any]]:
         with self._get_connection() as conn:

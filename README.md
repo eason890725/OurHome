@@ -70,9 +70,42 @@
 ```
 
 ### B. 防止本地推播覆蓋雲端 DB 之關鍵設定
-- `rentals_backup.json` **已加入 `.gitignore`** 並執行 `git rm --cached rentals_backup.json`。
-- 本地開發者執行 `git push origin main` 推播程式碼時，**Git 絕對不會推送 `rentals_backup.json`**，因此雲端資料庫永遠不會被本地舊資料覆蓋。
-- 雲端 Render 伺服器與本地開機時，`db.restore_from_backup_json()` 會透過 GitHub REST API / Raw URL 直接下載最新備份檔並還原至 SQLite。
+
+> ⚠️ **`rentals_backup.json` 必須保持被 git 追蹤，絕對不可以 untrack。**
+> 它就是整套系統的 Master DB：Render 雲端用 GitHub API 把它寫進 repo，所有節點再從 repo 讀回。
+> 若執行 `git rm --cached rentals_backup.json` 並 commit，該檔會從 GitHub repo 上被刪除，
+> `restore_from_backup_json()` 的 raw URL 會 404，等同雲端資料庫全毀。
+
+實際的防覆蓋機制有三層：
+
+**第一層 — `.githooks/pre-commit`（本地推程式碼時）**
+自動把 `rentals_backup.json` 從每次 commit 剔除，`git add .` / `git commit -a` 也不會誤傷。
+重新 clone 之後需要啟用一次：
+
+```bash
+git config core.hooksPath .githooks
+```
+
+真的要提交它時（例如從 git 歷史還原資料）：`OURHOME_ALLOW_BACKUP_COMMIT=1 git commit -m "..."`
+
+**第二層 — 讀不到 Master 就禁止回推（`db.py`）**
+Render 免費方案硬碟是暫存的，每次重新部署 `rentals.db` 都會被清空、靠雲端備份還原。
+若開機時因網路問題抓不到備份，DB 會是空的；此時若照常回推，就會用一份「有房源但沒有任何評分」
+的資料覆蓋掉正確版本。因此 `restore_from_backup_json()` 只有在確實讀到可解析且非空的主檔時，
+才會把 `_master_loaded` 設為 True，否則 `sync_backup_json()` 一律拒絕回推（並會先自動補讀一次）。
+
+**第三層 — 推送成功才記錄 hash（`db.py`）**
+`_LAST_PUSHED_HASH` 只在 GitHub 回傳 200/201 之後才更新。推送失敗會保留舊 hash，
+下次同步自動重試；遇到 409/422（sha 過期）會重抓 sha 再試一次。
+
+**若資料真的出事**：每次雲端 auto-sync 都是一個 commit，
+`git log --oneline -- rentals_backup.json` 可以找到任一時間點還原。
+
+此外 `main.py` 的 `auto_git_pull()` 在本地巡邏前會先 `git checkout rentals_backup.json`
+丟棄本地變更再 pull（僅在本地執行 `python main.py` 時生效）。
+
+- 雲端 Render 伺服器與本地開機時，`db.restore_from_backup_json()` 會透過 GitHub REST API / Raw URL 直接下載最新備份檔並還原至 SQLite（只 INSERT 缺漏的 `house_id`，不 UPDATE，因此本地既有評分不會被蓋掉）。
+- 本地若要手動推程式碼，請避免 `git commit -a`；用 `git add <指定檔案>` 明確列出要提交的檔案。
 
 ---
 
@@ -116,7 +149,8 @@
 ```
 OurHome/
 ├── app.py                      # Flask 雲端 Web 儀表板入口與背景獨立子程序爬蟲迴圈
-├── dashboard.py                # 本地單檔 HTTP 儀表板與 API Handler
+├── dashboard.py                # 本地 HTTP 儀表板與 API Handler
+├── ui_shared.py                # ⭐ app.py / dashboard.py 共用的前端 HTML_TEMPLATE 與資料格式化快取
 ├── db.py                       # SQLite 資料庫操作、WAL 模式、MD5 雜湊比較與 GitHub REST API 自動同步
 ├── scraper.py                  # 二階段 Playwright + requests 輕量化雙層爬蟲
 ├── cost_calculator.py          # 租屋真實月總成本計算器 (管理費、水電雜費解析)
@@ -128,7 +162,7 @@ OurHome/
 ├── Procfile                    # Render 雲端生產環境 Gunicorn 啟動指令
 ├── requirements.txt            # Python 依賴套件套件清單
 ├── .env                        # 環境變數設定檔 (非公開)
-├── .gitignore                  # Git 排除清單 (包含 rentals.db 與 rentals_backup.json)
+├── .gitignore                  # Git 排除清單 (rentals.db 與 WAL 附屬檔；rentals_backup.json 刻意「不」排除)
 └── rentals_backup.json         # 雲端 GitHub 雙向同步之 JSON 全量資料庫備份 (動態)
 ```
 
@@ -193,6 +227,7 @@ CREATE TABLE IF NOT EXISTS houses (
 
 ## 🛠️ 10. 給 AI 開發者 (Claude / GPT) 的開發接手提示
 
-1. **如需修改前端儀表板**：請同時修改 [app.py](file:///c:/personl/OurHome/app.py) 與 [dashboard.py](file:///c:/personl/OurHome/dashboard.py) 中的 `HTML_TEMPLATE` 變數。
+1. **如需修改前端儀表板**：只要改 [ui_shared.py](file:///c:/personl/OurHome/ui_shared.py) 的 `HTML_TEMPLATE`，`app.py` 與 `dashboard.py` 會同時生效（兩邊只差各自的 `PAGE_TITLE` 常數）。卡片上的費用與標籤欄位則來自同檔的 `get_formatted_houses()`。
 2. **如需修改去重與評分邏輯**：請參閱 [db.py](file:///c:/personl/OurHome/db.py) 中的 `update_house_rating` 與 `is_precise_duplicate`。請切記保持 `sync_backup_json()` 中的 MD5 Hash 比較邏輯，否則會引發 GitHub API 頻繁寫入。
-3. **請勿將 `rentals_backup.json` 移出 `.gitignore`**：否則本地推播程式碼時會將雲端最新 DB 覆蓋回舊版。
+3. **請勿把 `rentals_backup.json` 從 git 移除追蹤**：它是雲端 Master DB 的實體，untrack 並 commit 會直接把它從 GitHub repo 刪掉，導致所有節點還原失敗。詳見第 3-B 節。
+4. **發送 Discord 通知前務必先填 `cost_info`**：`notifier.send_house_card()` 只負責排版，費用是由呼叫端用 `parse_rental_costs()` 算好塞進 `house["cost_info"]`。`run_crawler_standalone.py`（雲端路徑）與 `main.py`（本地路徑）都必須做這一步，漏掉卡片就會顯示「未估算」。

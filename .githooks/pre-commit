@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+# OurHome 資料保護 hook
+# ---------------------------------------------------------------------------
+# rentals_backup.json 是雲端 Master DB 的實體：Render 用 GitHub API 單向寫入它，
+# 所有節點再從 repo 讀回來還原 SQLite。本機那份幾乎永遠是舊的。
+#
+# 只要它混進一次 commit 並 push，雲端資料庫就會被回滾成本機的舊版本，
+# 使用者評分（爬蟲重爬不回來的東西）會直接消失。
+#
+# 這個 hook 會在每次 commit 前把它從暫存區踢掉，讓 `git add .` / `git commit -a`
+# 也不會誤傷。檔案本身不會被刪除或修改，只是不進這次 commit。
+#
+# 真的需要提交它時（例如從 git 歷史還原資料後要推回去）：
+#     OURHOME_ALLOW_BACKUP_COMMIT=1 git commit -m "..."
+# ---------------------------------------------------------------------------
+
+PROTECTED="rentals_backup.json"
+
+if [ "$OURHOME_ALLOW_BACKUP_COMMIT" = "1" ]; then
+    echo "[pre-commit] OURHOME_ALLOW_BACKUP_COMMIT=1 已設定，略過 $PROTECTED 保護。"
+    exit 0
+fi
+
+if git diff --cached --name-only | grep -qx "$PROTECTED"; then
+    git restore --staged "$PROTECTED" 2>/dev/null || git reset -q HEAD "$PROTECTED"
+    echo ""
+    echo "  ⚠️  [pre-commit] 已把 $PROTECTED 移出這次 commit。"
+    echo ""
+    echo "      它是雲端 Master DB，只能由 Render 透過 GitHub API 寫入。"
+    echo "      從本機提交它會把雲端資料回滾成舊版，評分紀錄會消失。"
+    echo "      檔案內容未被更動，只是不會進入這次 commit。"
+    echo ""
+fi
+
+exit 0

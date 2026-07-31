@@ -55,9 +55,12 @@ class HousingMonitorApp:
                 return
 
             # 2. 自動萃取費用細項與估算 400 度用電雙人月總成本
+            #    details_text 是內頁抓回來的費用行，一定要納入，否則管理費/電費解析不到
             for house in fetched_houses:
-                full_text = f"{house.get('title', '')} {house.get('address', '')}"
+                full_text = f"{house.get('title', '')} {house.get('address', '')} {house.get('details_text', '')}"
                 house["cost_info"] = parse_rental_costs(full_text, house.get("price", "0"))
+                house["couples_warnings"] = self.scraper.detect_couples_warnings(full_text)
+                house["couples_features"] = self.scraper.detect_couples_features(full_text)
 
             # 3. 資料庫 ID 與智慧地址特徵碼去重/降價檢查
             batch_result = self.db.process_houses_batch(fetched_houses)

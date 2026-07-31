@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from db import HousingDB
 from scraper import RentalScraper
 from notifier import DiscordNotifier
+from cost_calculator import parse_rental_costs
 from config import DISCORD_WEBHOOK_URL, DB_PATH
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -23,7 +24,14 @@ def main():
         scraped_houses = scraper.run()
         if scraped_houses:
             logger.info(f"爬蟲成功抓取到 {len(scraped_houses)} 筆合格物件，準備批量寫入資料庫...")
-            
+
+            # 估算真實月總成本與雙人標籤，Discord 卡片才不會顯示「未估算」
+            for house in scraped_houses:
+                full_text = f"{house.get('title', '')} {house.get('address', '')} {house.get('details_text', '')}"
+                house["cost_info"] = parse_rental_costs(full_text, house.get("price", "0"))
+                house["couples_warnings"] = scraper.detect_couples_warnings(full_text)
+                house["couples_features"] = scraper.detect_couples_features(full_text)
+
             # 自動重試機制 (防止 SQLite 瞬時併發競爭)
             batch_result = None
             for attempt in range(3):
