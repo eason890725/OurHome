@@ -10,7 +10,6 @@ from scraper import RentalScraper
 from notifier import DiscordNotifier
 from cost_calculator import parse_rental_costs
 from config import DISCORD_WEBHOOK_URL, DB_PATH
-import commute
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("StandaloneCrawler")
@@ -59,12 +58,6 @@ def main():
                     logger.info("沒有新增加或降價的合格物件，不發送通知。")
             else:
                 logger.error("❌ 批量寫入資料庫多次重試後失敗。")
-
-        # 補查新地址的通勤時間（有快取，穩定後每輪只會查到新增的幾筆）
-        try:
-            commute.backfill(db)
-        except Exception as e:
-            logger.error(f"通勤時間補查失敗（不影響巡邏）: {e}")
 
     except Exception as e:
         logger.error(f"獨立子程序巡邏異常: {e}")

@@ -170,16 +170,14 @@ def get_formatted_houses(db, scraper):
         h["couples_warnings"] = scraper.detect_couples_warnings(full_text)
         h["couples_features"] = scraper.detect_couples_features(full_text)
         h["price_drop"] = annotate_price_drop(h)
+        # 通勤估算是純離線計算（找站名 + 路網最短路徑），很快，直接在這裡算。
+        # 標題優先，找不到才看內文——內文常順帶提到別的車站。
+        h["commute"] = commute.estimate(h.get("title", ""), fallback_text=h.get("details_text", ""))
 
     # 行情基準線要先看過全部房源才算得出中位數，因此獨立跑第二輪
     baseline = build_market_baseline(houses)
     for h in houses:
         h["market"] = annotate_market(h, baseline)
-
-    # 通勤時間：只讀快取，不在這裡打 API（避免拖慢儀表板回應）
-    commute_cache = db.get_commute_cache() if commute.is_enabled() else {}
-    for h in houses:
-        h["commute"] = commute.summarize(commute_cache.get(h.get("address", "")))
 
     _HOUSES_CACHE = houses
     _CACHE_LAST_UPDATE = now
@@ -360,6 +358,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                        color:#93c5fd; border:1px solid rgba(59,130,246,0.28); }
         .commute-fast { background:rgba(16,185,129,0.14); color:#6ee7b7; border-color:rgba(16,185,129,0.3); }
         .commute-slow { background:rgba(249,115,22,0.12); color:#fb923c; border-color:rgba(249,115,22,0.3); }
+        .commute-note { font-size:0.68rem; color:var(--text-dim); margin-top:4px; opacity:0.75; }
 
         .house-card:hover {
             transform: translateY(-3px); border-color: rgba(56, 189, 248, 0.4);
@@ -813,9 +812,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             if (!c || !c.items || !c.items.length) return '';
             const tags = c.items.map(i => {
                 const cls = i.minutes <= 25 ? 'commute-fast' : (i.minutes >= 45 ? 'commute-slow' : '');
-                return `<span class="commute-tag ${cls}">🚇 ${esc(i.dest)} ${i.minutes} 分</span>`;
+                const detail = i.transfers > 0 ? `${i.stops}站/轉${i.transfers}次` : `${i.stops}站直達`;
+                return `<span class="commute-tag ${cls}" title="${detail}">🚇 ${esc(i.dest)} 約${i.minutes}分</span>`;
             }).join('');
-            return `<div class="commute-row">${tags}</div>`;
+            return `
+                <div class="commute-row">
+                    <span class="commute-tag" style="background:rgba(148,163,184,0.12);color:#cbd5e1;border-color:rgba(148,163,184,0.25);">📍 近 ${esc(c.station)}站</span>
+                    ${tags}
+                </div>
+                <div class="commute-note">通勤為路網估算（每站 2 分、轉乘 5 分、步行 5 分），非實際時刻表</div>`;
         }
 
         function renderGrid(houses) {

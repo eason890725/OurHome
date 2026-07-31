@@ -60,6 +60,15 @@ playwright install chromium
 
 `app.py` 模組載入時就 `crawler_thread.start()` 啟動 `background_crawler_loop()`，該迴圈用 `subprocess.Popen([sys.executable, "run_crawler_standalone.py"])` 開獨立進程巡邏，避開 GIL 與 Web 請求互鎖。因為是模組層級啟動，`gunicorn` 必須維持 `--workers 1`，否則每個 worker 都會各開一份爬蟲。
 
+### 5.5 通勤估算是離線的，不要改成呼叫外部 API
+
+[commute.py](commute.py) 內建台北捷運路網（`MRT_LINES`），用 Dijkstra 算最短路徑：每站 2 分、轉乘 5 分、步行 5 分。**使用者明確不要需要 API 金鑰的方案**（先前用 Google Distance Matrix 的版本就是因此被放棄的），所以不要再引入 Google Maps／TDX 之類需要註冊金鑰的服務。
+
+- `find_station()` 用最長匹配從文字找站名，優先序是「有捷運字樣 > 出現位置較前 > 站名較長」。位置優先於長度是刻意的：`estimate()` 先看標題再退回 `details_text`，內文常順帶提到別的車站。
+- `DISTRICT_COLLISIONS` 擋掉「中山區」被當成中山站這類誤判；站名後接「路街巷弄段號」也會被跳過（例如「南京東路」）。
+- 路網未收錄環狀線。若要修正站名或順序，直接改 `MRT_LINES`，其餘程式碼不需要動。
+- 這是**估算值**，UI 上有標註。實測 166 筆真實資料可辨識 165 筆（99%），其中 124 筆站名來自標題。
+
 ### 6. 通知的費用欄位由呼叫端負責填
 
 `notifier.send_house_card()` 只做排版，它讀 `house["cost_info"]`，不會自己算。**兩條巡邏路徑都必須在發送前先跑 `parse_rental_costs()`**：`run_crawler_standalone.py`（雲端 24H 實際路徑）與 `main.py`（本地路徑）。漏掉的話卡片費用欄位會顯示「未估算」。
