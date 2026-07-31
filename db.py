@@ -171,7 +171,21 @@ class HousingDB:
             logger.debug(f"GitHub API 雙向同步異常: {e}")
 
     def restore_from_backup_json(self):
-        """當資料庫為空時（如 Render 重設硬碟），自動從 rentals_backup.json 還原"""
+        """優先從 GitHub REST API / Raw 下載最新雲端 rentals_backup.json 並自動還原至 SQLite 資料庫"""
+        try:
+            raw_url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{GITHUB_FILE_PATH}"
+            headers = {"User-Agent": "Mozilla/5.0"}
+            token = os.environ.get("GITHUB_TOKEN")
+            if token:
+                headers["Authorization"] = f"token {token}"
+            
+            resp = requests.get(raw_url, headers=headers, timeout=8)
+            if resp.status_code == 200 and resp.text.strip():
+                with open("rentals_backup.json", "w", encoding="utf-8") as f:
+                    f.write(resp.text)
+        except Exception as e:
+            logger.debug(f"下載雲端 rentals_backup.json 提示: {e}")
+
         if not os.path.exists("rentals_backup.json"):
             return
         try:

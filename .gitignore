@@ -2,6 +2,10 @@
 rentals.db
 *.db
 
+# 雲端自動同步 JSON 備份檔 (避免本機 git commit 覆蓋雲端最新紀錄)
+rentals_backup.json
+rentals_backup.json.tmp
+
 # Python 暫存
 __pycache__/
 *.pyc
