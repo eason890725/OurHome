@@ -11,7 +11,6 @@ import requests
 from flask import Flask, jsonify, request
 
 from db import HousingDB
-from scraper import RentalScraper
 from notifier import DiscordNotifier
 from config import DISCORD_WEBHOOK_URL, DB_PATH, CHECK_INTERVAL_MINUTES
 from ui_shared import get_formatted_houses, invalidate_houses_cache, render_dashboard_html
@@ -22,13 +21,15 @@ logger = logging.getLogger("OurHomeCloudApp")
 app = Flask(__name__)
 db = HousingDB(DB_PATH)
 notifier = DiscordNotifier(DISCORD_WEBHOOK_URL)
-scraper = RentalScraper()
 
 PAGE_TITLE = "OurHome 租屋品質與成本儀表板 (雲端 24H 版)"
 
+# 這個 Web 程序刻意不 import RentalScraper（也就不會載入 Playwright）。
+# 爬蟲跑在獨立子程序裡，Web 端載入它只是白白吃掉 512MB 容器的記憶體。
+
 
 def get_formatted_houses_cached():
-    return get_formatted_houses(db, scraper)
+    return get_formatted_houses(db)
 
 
 @app.route("/")

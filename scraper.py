@@ -11,6 +11,7 @@ from playwright.sync_api import sync_playwright
 
 from config import USER_AGENTS, COOKIES_FILE, EXCLUDE_KEYWORDS, MIN_SIZE_SQFT
 from search_filters import get_target_search_urls, RENT_MIN, RENT_MAX, ALLOWED_SECTIONS
+from text_features import detect_couples_warnings, detect_couples_features
 
 logger = logging.getLogger(__name__)
 
@@ -74,23 +75,13 @@ class RentalScraper:
                 return kw
         return None
 
+    # 實作已移到 text_features.py，讓 Web 程序不必為了這兩個 regex 而載入 Playwright。
+    # 這裡保留同名方法，既有呼叫端不需要改動。
     def detect_couples_warnings(self, text: str) -> List[str]:
-        warnings = []
-        if re.search(r'(第二人|多1人|兩人入住加價|加收費用|加價|每多一人)', text):
-            warnings.append("⚠️ 第二人入住需額外加價/補貼")
-        if re.search(r'(儲熱式|儲熱型|電熱水器)', text):
-            warnings.append("⚠️ 儲熱式熱水器 (連續洗澡熱水可能不足)")
-        return warnings
+        return detect_couples_warnings(text)
 
     def detect_couples_features(self, text: str) -> List[str]:
-        features = []
-        if re.search(r'(獨立陽台|獨陽|有陽台|陽台)', text):
-            features.append("🧺 獨立陽台")
-        if re.search(r'(獨立洗衣機|獨洗|獨洗獨曬|個人洗衣機)', text):
-            features.append("🧺 獨立洗衣機")
-        if re.search(r'(雙人床|雙人雙層|雙人大床)', text):
-            features.append("🛏️ 雙人床配置")
-        return features
+        return detect_couples_features(text)
 
     def is_invalid_broker_or_ad(self, title: str, href: str) -> bool:
         invalid_patterns = [

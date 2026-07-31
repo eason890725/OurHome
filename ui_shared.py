@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 
 import commute
 from cost_calculator import parse_rental_costs
+from text_features import detect_couples_warnings, detect_couples_features
 
 logger = logging.getLogger(__name__)
 
@@ -186,7 +187,7 @@ _HOUSES_CACHE = []
 _CACHE_LAST_UPDATE = 0
 
 
-def get_formatted_houses(db, scraper):
+def get_formatted_houses(db, scraper=None):
     """讀取全部房屋並即時附掛 cost_info / 雙人警示 / 雙人配備標籤（帶 5 秒快取）。
 
     費用與標籤刻意不落 DB，而是每次讀取時依當下 MODE 重新計算，
@@ -201,8 +202,8 @@ def get_formatted_houses(db, scraper):
     for h in houses:
         full_text = f"{h.get('title', '')} {h.get('address', '')} {h.get('details_text', '')}"
         h["cost_info"] = parse_rental_costs(full_text, h.get("price", "0"))
-        h["couples_warnings"] = scraper.detect_couples_warnings(full_text)
-        h["couples_features"] = scraper.detect_couples_features(full_text)
+        h["couples_warnings"] = detect_couples_warnings(full_text)
+        h["couples_features"] = detect_couples_features(full_text)
         h["price_drop"] = annotate_price_drop(h)
         # 通勤估算是純離線計算（找站名 + 路網最短路徑），很快，直接在這裡算。
         # 標題優先，找不到才看內文——內文常順帶提到別的車站。

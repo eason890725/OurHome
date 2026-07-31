@@ -270,6 +270,16 @@ class HousingDB:
         item_count = len(json.loads(json_bytes.decode("utf-8")))
         content_b64 = base64.b64encode(json_bytes).decode("utf-8")
 
+        # ⚠️ commit 訊息必須含 [skip render]，否則會觸發 Render 重新部署，
+        #    形成「巡邏 → 寫回 GitHub → 重新部署 → 90 秒後又巡邏」的無窮迴圈。
+        #    實際發生過：部署事件裡出現 "Deploy live for <sha>: data: auto-sync ..."，
+        #    連帶讓 Chromium 啟動頻率遠高於設定值而撐爆 512MB 記憶體。
+        #    [skip ci] 只對 GitHub Actions 有效，Render 不認得。
+        commit_message = (
+            f"data: auto-sync rentals_backup.json ({item_count} items) "
+            f"from Render cloud [skip render] [skip ci]"
+        )
+
         def _current_sha() -> str:
             try:
                 get_resp = requests.get(url, headers=headers, timeout=5)
@@ -282,7 +292,7 @@ class HousingDB:
         for attempt in (1, 2):
             try:
                 payload = {
-                    "message": f"data: auto-sync rentals_backup.json ({item_count} items) from Render cloud [skip ci]",
+                    "message": commit_message,
                     "content": content_b64,
                     "branch": "main"
                 }

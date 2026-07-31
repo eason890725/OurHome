@@ -8,7 +8,6 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Dict, Any, List
 
 from db import HousingDB
-from scraper import RentalScraper
 from config import DB_PATH
 from ui_shared import get_formatted_houses, invalidate_houses_cache, render_dashboard_html
 
@@ -16,13 +15,14 @@ logger = logging.getLogger(__name__)
 
 PORT = 5000
 db = HousingDB(DB_PATH)
-scraper = RentalScraper()
 
 PAGE_TITLE = "OurHome 租屋品質與成本儀表板"
 
+# 儀表板不 import RentalScraper（也就不載入 Playwright），理由同 app.py。
+
 
 def get_formatted_houses_cached():
-    return get_formatted_houses(db, scraper)
+    return get_formatted_houses(db)
 
 
 class DashboardRequestHandler(BaseHTTPRequestHandler):
