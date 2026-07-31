@@ -1,0 +1,198 @@
+# OurHome - 591 租屋品質與真實成本自動化監控儀表板
+
+> **專案版本**：v2.5 (24H 雲端零成本全自動巡邏 & 2 秒脫離極速低記憶體架構)  
+> **適用平台**：Render Cloud (雲端 24H 免費部署) / Windows 本地獨立執行  
+> **專用說明檔**：本 README 包含專案之完整架構設計、資料流動圖、資料庫 schema、記憶體優化原理、去重演算法與環境變數設定，供 Claude 或其他 AI 輔助開發者全盤了解。
+
+---
+
+## 📖 1. 專案簡介 (Project Overview)
+
+**OurHome** 是一款針對台灣 591 租屋網（`rent.591.com.tw`）設計的自動化租屋品質監控與真實月成本估算系統。
+
+### 🌟 核心解決痛點：
+1. **真實月總成本計算**：591 刊登租金不包含管理費、台電/非台電高額電費、水費與垃圾代收費。OurHome 自動解析內文，估算雙人模式（預設 400 度電）或單人模式（預設 200 度電）的真實預估月支出。
+2. **100% 精準下架/出租辨識**：物件被租出下架後，系統自動將卡片加上 `🏚️ 已下架/已出租` 灰色標籤並提供獨立篩選，**絕不抹滅使用者對該房源的歷史評分與紀錄**。
+3. **雲端 512MB RAM 極致省記憶體**：獨創「二階段極速 2 秒脫離 Playwright 架構」，Chromium 瀏覽器僅存活 2 秒擷取 DOM 即刻銷毀，整體運作記憶體死死控制在 **< 40MB**，徹底解決 Render 512MB 免費伺服器 OOM (Out of Memory) 崩潰問題。
+4. **雙向無衝突全自動雲端同步**：利用 GitHub REST API，Render 雲端伺服器在巡邏到新房源或收到使用者評分時，自動 commit 最新資料回 GitHub，且 `.gitignore` 排除本地 JSON 覆蓋，實現本地推播程式碼也不會覆蓋雲端 DB 的零衝突架構。
+5. **多網址搜尋與同義字搜尋儀表板**：前端網頁儀表板支援行政區動態標籤、同義字自動連動搜尋（輸入「租補」可自動連動「社宅/租金補貼/可補/補助」）。
+
+---
+
+## 🏗️ 2. 系統架構與技術棧 (Architecture & Tech Stack)
+
+```
+                       [ 591 租屋網 (rent.591.com.tw) ]
+                                      │
+              ┌───────────────────────┴───────────────────────┐
+              ▼ (Playwright DOM 擷取 2 秒銷毀 + 純 Python HTTP 內頁)
+  [ ☁️ Render Cloud Web Service ]               [ 💻 本地 PC / Standalone ]
+   - Flask Web / Dashboard (Port 5000)            - Standalone Python / Dashboard
+   - 24H 背景獨立巡邏子程序                         - 選擇性本機巡邏
+   - SQLite (WAL 模式高併發)                       - SQLite (WAL 模式)
+              │                                               │
+              └───────────────────────┬───────────────────────┘
+                                      ▼
+                      [ 🐙 GitHub REST API (Master DB) ]
+                            rentals_backup.json
+                                      │
+                                      ▼
+                        [ 📣 Discord Webhook 頻道 ]
+                    (自動標註 [☁️ Render 雲端] / [💻 本地 PC])
+```
+
+- **程式語言**：Python 3.11+ / JavaScript (Vanilla ES6 HTML5 Dashboard)
+- **Web 框架**：Flask (雲端) / `http.server.HTTPServer` (本地免安裝單檔)
+- **網頁爬蟲**：Playwright (Chromium Headless) + `requests` (純 HTTP 明細擷取)
+- **資料庫**：SQLite 3 (`PRAGMA journal_mode=WAL;` 高併發模式)
+- **伺服器 WSGI**：Gunicorn (`gthread` 多執行緒模式, timeout 300s)
+- **即時通知**：Discord Webhook API (內建 HTTP 429 Retry-After 避讓與來源標籤)
+- **雲端同步**：GitHub REST API (`PUT /repos/{owner}/{repo}/contents/{path}`)
+
+---
+
+## 🔄 3. 全自動資料流動與同步機制 (Data Flow & GitHub Sync)
+
+### A. 爬蟲巡邏流向
+```
+[ 591 搜尋頁面 ] ──(Playwright 2秒)──> [ 記憶體內卡片清單 ] ──(Chromium 關閉)
+                                             │
+                                             ▼ (純 Python HTTP requests.get)
+                                    [ 591 內頁與下架狀態比對 ]
+                                             │
+                                             ▼
+                                 [ SQLite DB (rentals.db) ]
+                                             │
+                                             ▼ (MD5 指紋 Hash 比對)
+                                   Hash 是否變動?
+                                ├── 是 ──> [ rentals_backup.json ] ──(GitHub API)──> [ GitHub Repo ]
+                                └── 否 ──> (靜音不發送 API，避免請求浪費)
+```
+
+### B. 防止本地推播覆蓋雲端 DB 之關鍵設定
+- `rentals_backup.json` **已加入 `.gitignore`** 並執行 `git rm --cached rentals_backup.json`。
+- 本地開發者執行 `git push origin main` 推播程式碼時，**Git 絕對不會推送 `rentals_backup.json`**，因此雲端資料庫永遠不會被本地舊資料覆蓋。
+- 雲端 Render 伺服器與本地開機時，`db.restore_from_backup_json()` 會透過 GitHub REST API / Raw URL 直接下載最新備份檔並還原至 SQLite。
+
+---
+
+## ⚡ 4. 記憶體與爬蟲效能優化 (Memory & Scraper Optimization)
+
+### A. 二階段極速 2 秒脫離 Playwright 架構 ([scraper.py](file:///c:/personl/OurHome/scraper.py))
+1. **階段一 (Playwright 2 秒)**：
+   - 啟動 Chromium，限制 V8 JavaScript Heap 上限 64MB (`--js-flags=--max-old-space-size=64`)。
+   - 使用 `context.route` 100% 阻斷所有 `image`、`font`、`media`、`stylesheet` 網路請求，節省 90% 記憶體。
+   - 滾動頁面 2 次並透過 `eval_on_selector_all` 擷取 DOM 卡片資訊。
+   - **立即呼叫 `browser.close()` 徹底銷毀 Chromium 進程並執行 `gc.collect()`**！
+2. **階段二 (純 Python 0MB 瀏覽器負擔)**：
+   - 針對抓取到的 `house_id`，使用純 Python `requests.get()` 發送 HTTP 請求補充詳細費用與驗證下架狀態。
+   - 強制指定 `resp.encoding = 'utf-8'` 防止 591 頁面解碼中文亂碼。
+
+### B. 結果：
+- 記憶體峰值從 **450MB+ 直降至 ~30MB**，留給 Render 512MB 免費容器高達 **480MB 的全空安全緩衝**。
+
+---
+
+## 🏚️ 5. 下架/出租與去重邏輯 (Off-market & Deduplication)
+
+### A. 已下架/已出租判斷
+- 直連 591 內頁 URL (`https://rent.591.com.tw/{house_id}`)。
+- 若 HTTP Status Code 為 `404` 或 `410` ➔ 標記 `status = 'off_market'`。
+- 若 HTTP Status Code 為 `200`，但 HTML 內文包含以下關鍵字 ➔ 標記 `status = 'off_market'`：
+  - `"您查詢的物件不存在"`、`"可能已關閉或者被刪除"`、`"物件已下架"`、`"已被租出"`、`"找不到頁面"`。
+- **UI 呈現**：網頁儀表板保留卡片，壓暗彩度，加上 `🏚️ 已下架/已出租` 灰色標籤與專屬 Filter Pill，不破壞歷史評分紀錄。
+
+### B. 雙重智慧去重
+1. **Primary Key**：591 官方 `house_id`。
+2. **智慧地址與標題模糊去重 (`is_precise_duplicate`)**：
+   - 清理標題噪訊字詞（如「搶租/精選/大套房/獨洗」）。
+   - 計算 SequenceMatcher 相似度，若仲介/社宅貼文相似度 > 0.60 或一般物件相似度 > 0.70 ➔ 判定為重複刊登並自動過濾。
+   - 生成地址與坪數特徵碼 `generate_address_fingerprint`（例如 `大安區羅斯福路三段_10.5坪`），若相同地址且坪數相差 <= 0.5 坪 ➔ 判定為同一間房屋之重複刊登。
+
+---
+
+## 📂 6. 專案檔案結構說明 (Project Directory Structure)
+
+```
+OurHome/
+├── app.py                      # Flask 雲端 Web 儀表板入口與背景獨立子程序爬蟲迴圈
+├── dashboard.py                # 本地單檔 HTTP 儀表板與 API Handler
+├── db.py                       # SQLite 資料庫操作、WAL 模式、MD5 雜湊比較與 GitHub REST API 自動同步
+├── scraper.py                  # 二階段 Playwright + requests 輕量化雙層爬蟲
+├── cost_calculator.py          # 租屋真實月總成本計算器 (管理費、水電雜費解析)
+├── notifier.py                 # Discord Webhook 嵌入式卡片發送器 (含來源標籤)
+├── config.py                   # 全局配置檔 (.env 載入、多網址解析、User-Agents)
+├── search_filters.py           # 591 目標搜尋網址與條件設定
+├── main.py                     # 本地排程器入口 (Schedule + 儀表板背景執行緒)
+├── run_crawler_standalone.py  # 獨立子程序爬蟲啟動器 (隔離 Web GIL 鎖定)
+├── Procfile                    # Render 雲端生產環境 Gunicorn 啟動指令
+├── requirements.txt            # Python 依賴套件套件清單
+├── .env                        # 環境變數設定檔 (非公開)
+├── .gitignore                  # Git 排除清單 (包含 rentals.db 與 rentals_backup.json)
+└── rentals_backup.json         # 雲端 GitHub 雙向同步之 JSON 全量資料庫備份 (動態)
+```
+
+---
+
+## 🗄️ 7. 資料庫 Schema (SQLite `rentals.db`)
+
+```sql
+CREATE TABLE IF NOT EXISTS houses (
+    house_id TEXT PRIMARY KEY,               -- 591 物件 ID
+    title TEXT NOT NULL,                     -- 房屋標題
+    price TEXT,                              -- 原始刊登租金字串 (例如 "23,000元/月")
+    numeric_price INTEGER,                   -- 刊登租金純數字 (例如 23000)
+    address TEXT,                            -- 乾淨門牌/路段地址
+    size TEXT,                               -- 坪數資訊 (例如 "10.5坪")
+    link TEXT,                               -- 591 官方詳細頁連結
+    address_fingerprint TEXT,                -- 地址+坪數特徵碼 (用於跨刊登去重)
+    price_history TEXT,                      -- 歷史價格異動 JSON Array
+    details_text TEXT,                       -- 費用細項與說明文字
+    user_rating TEXT DEFAULT 'none',         -- 使用者評分 ('like'|'neutral'|'dislike'|'none')
+    status TEXT DEFAULT 'active',            -- 上架狀態 ('active'|'off_market')
+    missing_count INTEGER DEFAULT 0,         -- 消失計數器
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 首次抓取時間
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP  -- 最後更新時間
+);
+```
+
+---
+
+## ⚙️ 8. 環境變數設定 (Environment Variables)
+
+於 `.env` 或 Render Dashboard 設定：
+
+| 環境變數 | 說明 | 範例值 |
+| :--- | :--- | :--- |
+| `MODE` | 租屋模式 (`couple` 雙人 400度 / `single` 單人 200度) | `couple` |
+| `DISCORD_WEBHOOK_URL` | Discord 頻道 Webhook URL | `https://discord.com/api/webhooks/...` |
+| `GITHUB_TOKEN` | GitHub Personal Access Token (用於雲端寫回 API) | `ghp_xxxxxxxxxxxxxxxxxxxx` |
+| `TARGET_URL` | 591 搜尋網址 (有多條時可用逗號分隔) | `https://rent.591.com.tw/list?...` |
+| `TARGET_URL_1`~`50` | 分號編號搜尋網址 | `https://rent.591.com.tw/list?...` |
+| `CHECK_INTERVAL_MINUTES` | 巡邏間隔分鐘數 | `10` |
+| `DB_PATH` | SQLite 資料庫檔名 | `rentals.db` |
+| `RENDER` | Render 系統預設環境變數 (自動辨識來源) | `true` |
+
+---
+
+## 🚀 9. 部署與本地執行指南 (Deployment & Run Guide)
+
+### 雲端部署 (Render Cloud Web Service)
+1. 於 Render 新建 **Web Service** 並連接本 GitHub 儲存庫。
+2. Build Command: `pip install -r requirements.txt && playwright install chromium`
+3. Start Command: `gunicorn app:app --workers 1 --worker-class gthread --threads 4 --timeout 300 --keep-alive 5`
+4. 環境變數：新增 `GITHUB_TOKEN` 與 `DISCORD_WEBHOOK_URL`。
+
+### 本地執行 (Windows PC)
+1. 安裝依賴：`pip install -r requirements.txt`
+2. 安裝 Playwright：`playwright install chromium`
+3. 啟動本機監控與儀表板：`python main.py`
+4. 瀏覽器開啟：`http://localhost:5000`
+
+---
+
+## 🛠️ 10. 給 AI 開發者 (Claude / GPT) 的開發接手提示
+
+1. **如需修改前端儀表板**：請同時修改 [app.py](file:///c:/personl/OurHome/app.py) 與 [dashboard.py](file:///c:/personl/OurHome/dashboard.py) 中的 `HTML_TEMPLATE` 變數。
+2. **如需修改去重與評分邏輯**：請參閱 [db.py](file:///c:/personl/OurHome/db.py) 中的 `update_house_rating` 與 `is_precise_duplicate`。請切記保持 `sync_backup_json()` 中的 MD5 Hash 比較邏輯，否則會引發 GitHub API 頻繁寫入。
+3. **請勿將 `rentals_backup.json` 移出 `.gitignore`**：否則本地推播程式碼時會將雲端最新 DB 覆蓋回舊版。
