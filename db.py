@@ -13,8 +13,11 @@ from typing import Optional, Dict, List, Tuple, Any
 
 logger = logging.getLogger(__name__)
 
-GITHUB_REPO = "eason890725/OurHome"
-GITHUB_FILE_PATH = "rentals_backup.json"
+# 雲端 Master DB 所在的 GitHub repo。設為空字串即進入「純本機模式」：
+# 完全不下載也不上傳，rentals_backup.json 只當本地備份用。
+# 預設值維持原本的 repo，因此既有 Render 部署不需要任何調整。
+GITHUB_REPO = os.getenv("GITHUB_REPO", "eason890725/OurHome")
+GITHUB_FILE_PATH = os.getenv("GITHUB_FILE_PATH", "rentals_backup.json")
 _LAST_PUSHED_HASH = ""
 
 def sanitize_text(text: str) -> str:
@@ -234,8 +237,9 @@ class HousingDB:
             os.replace(tmp_file, "rentals_backup.json")
 
             token = os.environ.get("GITHUB_TOKEN")
-            if not token:
-                # 本地無 token，不會推 GitHub；標記 hash 只是避免重複寫同樣的檔案
+            if not token or not GITHUB_REPO:
+                # 純本機模式或未設 token：不會推 GitHub。
+                # 標記 hash 只是避免下次重複寫出同樣的檔案。
                 _LAST_PUSHED_HASH = current_hash
                 return
 
@@ -309,29 +313,38 @@ class HousingDB:
         沒設起來的話 sync_backup_json() 會拒絕回推，防止空資料覆蓋雲端。
         """
         downloaded = False
-        try:
-            raw_url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{GITHUB_FILE_PATH}"
-            headers = {"User-Agent": "Mozilla/5.0"}
-            token = os.environ.get("GITHUB_TOKEN")
-            if token:
-                headers["Authorization"] = f"token {token}"
 
-            resp = requests.get(raw_url, headers=headers, timeout=8)
-            if resp.status_code == 200 and resp.text.strip():
-                # 先確認下載內容真的是合法 JSON，再覆蓋本地主檔，
-                # 避免收到半截或錯誤頁面時把好的本地備份寫壞。
-                json.loads(sanitize_text(resp.text))
-                with open("rentals_backup.json", "w", encoding="utf-8") as f:
-                    f.write(resp.text)
-                downloaded = True
-            else:
-                logger.warning(f"⚠️ 下載雲端 Master 備份未成功: HTTP {resp.status_code}")
-        except Exception as e:
-            logger.warning(f"⚠️ 下載雲端 Master 備份失敗，改用本地既有備份: {e}")
+        if not GITHUB_REPO:
+            # 純本機模式：沒有遠端 Master 需要保護，直接放行本地寫入
+            self._master_loaded = True
+            if not os.path.exists("rentals_backup.json"):
+                logger.info("🏠 純本機模式（未設定 GITHUB_REPO），將建立全新的本地資料庫")
+                return
+            logger.info("🏠 純本機模式（未設定 GITHUB_REPO），僅使用本地 rentals_backup.json")
+        else:
+            try:
+                raw_url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{GITHUB_FILE_PATH}"
+                headers = {"User-Agent": "Mozilla/5.0"}
+                token = os.environ.get("GITHUB_TOKEN")
+                if token:
+                    headers["Authorization"] = f"token {token}"
 
-        if not os.path.exists("rentals_backup.json"):
-            logger.error("🛑 雲端下載失敗且本地無 rentals_backup.json，無法確認 Master 內容。")
-            return
+                resp = requests.get(raw_url, headers=headers, timeout=8)
+                if resp.status_code == 200 and resp.text.strip():
+                    # 先確認下載內容真的是合法 JSON，再覆蓋本地主檔，
+                    # 避免收到半截或錯誤頁面時把好的本地備份寫壞。
+                    json.loads(sanitize_text(resp.text))
+                    with open("rentals_backup.json", "w", encoding="utf-8") as f:
+                        f.write(resp.text)
+                    downloaded = True
+                else:
+                    logger.warning(f"⚠️ 下載雲端 Master 備份未成功: HTTP {resp.status_code}")
+            except Exception as e:
+                logger.warning(f"⚠️ 下載雲端 Master 備份失敗，改用本地既有備份: {e}")
+
+            if not os.path.exists("rentals_backup.json"):
+                logger.error("🛑 雲端下載失敗且本地無 rentals_backup.json，無法確認 Master 內容。")
+                return
         try:
             with open("rentals_backup.json", "r", encoding="utf-8") as f:
                 raw_content = f.read()
@@ -630,4 +643,5 @@ class HousingDB:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    db = HousingDB("c:/personl/OurHome/rentals.db")
+    db = HousingDB(os.getenv("DB_PATH", "rentals.db"))
+    print(f"目前資料庫共 {len(db.get_all_houses())} 筆房屋紀錄")

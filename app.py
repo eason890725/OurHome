@@ -73,8 +73,12 @@ def api_sync_ratings():
 def keep_render_alive():
     """發送 HTTP Ping 防止 Render 免費伺服器因 15 分鐘無人存取而休眠 (24H 防休眠保活)"""
     try:
-        render_url = os.environ.get("RENDER_EXTERNAL_URL") or "https://ourhome-aiwq.onrender.com"
-        resp = requests.get(f"{render_url}/", timeout=10)
+        # Render 會自動注入 RENDER_EXTERNAL_URL；本機或其他平台可用 KEEP_ALIVE_URL 指定。
+        # 兩者都沒有就不 ping（本機執行時本來也不需要防休眠）。
+        render_url = os.environ.get("RENDER_EXTERNAL_URL") or os.environ.get("KEEP_ALIVE_URL")
+        if not render_url:
+            return
+        resp = requests.get(f"{render_url.rstrip('/')}/", timeout=10)
         logger.info(f"⚡ 防休眠 Ping 成功 ({render_url}) [Status: {resp.status_code}]")
     except Exception as e:
         logger.debug(f"防休眠 Ping 提示: {e}")

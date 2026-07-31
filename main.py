@@ -1,3 +1,4 @@
+import os
 import time
 import logging
 import random
@@ -25,7 +26,13 @@ logging.basicConfig(
 logger = logging.getLogger("MainScheduler")
 
 def auto_git_pull():
-    """自動從 GitHub 拉取 Render 雲端同步的最新資料庫與評價紀錄"""
+    """自動從 GitHub 拉取 Render 雲端同步的最新資料庫與評價紀錄。
+
+    先丟棄本地對 rentals_backup.json 的修改再 pull，避免本地舊資料與雲端衝突。
+    若這個資料夾不是 git repo（例如朋友拿到的獨立打包版），整段直接跳過。
+    """
+    if not os.path.isdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".git")):
+        return
     try:
         subprocess.run(["git", "checkout", "rentals_backup.json"], capture_output=True, text=True, timeout=5)
         res = subprocess.run(["git", "pull", "origin", "main"], capture_output=True, text=True, timeout=10)
