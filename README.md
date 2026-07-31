@@ -194,7 +194,12 @@ CREATE TABLE IF NOT EXISTS houses (
 
 ## ⚙️ 8. 環境變數設定 (Environment Variables)
 
-於 `.env` 或 Render Dashboard 設定：
+複製 [.env.example](file:///c:/personl/OurHome/.env.example) 成 `.env` 再填值。
+
+> 🔐 **`.env` 已排除於版控之外，機密不可進 repo。**
+> 正式環境請一律在 **Render Dashboard → Environment** 設定。
+> `load_dotenv()` 預設 `override=False`，因此**平台環境變數的優先權高於 `.env` 檔案**——
+> 雲端上 `.env` 的內容其實完全不會被採用。
 
 | 環境變數 | 說明 | 範例值 |
 | :--- | :--- | :--- |

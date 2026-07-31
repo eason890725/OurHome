@@ -23,3 +23,8 @@ scratch/
 
 # Cookies (隱私資訊)
 cookies.json
+
+# 環境變數與機密 (Webhook / Token 一律不進版控，改用 .env.example 當範本)
+.env
+.env.*
+!.env.example
