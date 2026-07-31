@@ -196,7 +196,16 @@ class HousingDB:
                 cursor.execute("ALTER TABLE houses ADD COLUMN missing_count INTEGER DEFAULT 0")
             if "updated_at" not in columns:
                 cursor.execute("ALTER TABLE houses ADD COLUMN updated_at TIMESTAMP")
-                
+
+            # 通勤時間快取：同一個地址只查一次 API，大幅降低用量與費用
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS commute_cache (
+                    address TEXT PRIMARY KEY,
+                    result_json TEXT NOT NULL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
             conn.commit()
             
         self.restore_from_backup_json()
@@ -633,6 +642,56 @@ class HousingDB:
                 conn.execute("PRAGMA wal_checkpoint(TRUNCATE);")
         except Exception as e:
             logger.debug(f"WAL checkpoint 跳過 (可能有其他連線佔用): {e}")
+
+    # ── 通勤時間快取 ────────────────────────────────────────────────
+    def get_commute_cache(self) -> Dict[str, Dict[str, int]]:
+        """讀出所有已快取的通勤時間，格式為 {地址: {目的地: 分鐘}}。"""
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("SELECT address, result_json FROM commute_cache").fetchall()
+            out: Dict[str, Dict[str, int]] = {}
+            for r in rows:
+                try:
+                    out[r["address"]] = json.loads(r["result_json"])
+                except Exception:
+                    continue
+            return out
+        except Exception as e:
+            logger.debug(f"讀取通勤快取失敗: {e}")
+            return {}
+
+    def save_commute_cache(self, results: Dict[str, Dict[str, int]]):
+        """寫入通勤查詢結果。已存在的地址會被覆蓋。"""
+        if not results:
+            return
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            with self._get_connection() as conn:
+                conn.executemany(
+                    "INSERT OR REPLACE INTO commute_cache (address, result_json, updated_at) VALUES (?, ?, ?)",
+                    [(addr, json.dumps(val, ensure_ascii=False), now_str) for addr, val in results.items()]
+                )
+                conn.commit()
+            logger.info(f"🚇 已快取 {len(results)} 筆通勤時間")
+        except Exception as e:
+            logger.error(f"寫入通勤快取失敗: {e}")
+
+    def get_addresses_without_commute(self) -> List[str]:
+        """找出還沒查過通勤時間的地址（排除粒度太粗或未提供的）。"""
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("""
+                    SELECT DISTINCT h.address FROM houses h
+                    LEFT JOIN commute_cache c ON c.address = h.address
+                    WHERE c.address IS NULL
+                      AND h.address IS NOT NULL AND h.address != ''
+                      AND h.address NOT LIKE '%未提供%'
+                      AND h.address NOT LIKE '%依現場%'
+                """).fetchall()
+            return [r["address"] for r in rows]
+        except Exception as e:
+            logger.debug(f"查詢待補通勤地址失敗: {e}")
+            return []
 
     def get_all_houses(self) -> List[Dict[str, Any]]:
         with self._get_connection() as conn:

@@ -5,12 +5,145 @@
 以及一份完全相同的 get_formatted_houses_cached()，改一邊漏一邊會讓本地與雲端行為分岔。
 修改儀表板 UI 或卡片欄位時，只需要改這個檔案。
 """
+import re
+import json
 import time
 import logging
+import statistics
+from typing import Any, Dict, List, Optional
 
+import commute
 from cost_calculator import parse_rental_costs
 
 logger = logging.getLogger(__name__)
+
+# 行情基準線：某行政區至少要有這麼多筆在架房源，中位數才有代表性
+MARKET_MIN_SAMPLE = 5
+
+# 相對中位數的偏離幅度分級（單位：百分比）
+MARKET_LEVELS = [
+    (-15, "cheap", "🟢 明顯低於行情"),
+    (-5, "below", "🟢 略低於行情"),
+    (5, "fair", "⚪ 行情價"),
+    (15, "above", "🟠 略高於行情"),
+]
+MARKET_LEVEL_TOP = ("expensive", "🔴 明顯高於行情")
+
+
+def parse_sqft(size_str) -> float:
+    m = re.search(r'(\d+(?:\.\d+)?)', str(size_str or ""))
+    return float(m.group(1)) if m else 0.0
+
+
+def extract_district(address: str) -> str:
+    """從地址取出行政區。
+
+    必須先剝掉縣市，否則「台北市中山區」會被貪婪地比對成「市中山區」，
+    導致同一個行政區在有無縣市前綴時被當成兩區，中位數也跟著失真。
+    """
+    addr = re.sub(r'^[一-龥]{2,3}[市縣]', '', (address or "").strip())
+    m = re.search(r'([一-龥]{1,3}[區鄉鎮])', addr)
+    return m.group(1) if m else ""
+
+
+def build_market_baseline(houses: List[Dict[str, Any]]) -> Dict[str, float]:
+    """算出各行政區「每坪真實月成本」的中位數，以及全體的中位數（鍵為空字串）。
+
+    只採計在架房源——已下架的價格可能已經過時，不能代表現在的行情。
+    """
+    by_district: Dict[str, List[float]] = {}
+    overall: List[float] = []
+
+    for h in houses:
+        if h.get("status") == "off_market":
+            continue
+        sqft = parse_sqft(h.get("size"))
+        total = (h.get("cost_info") or {}).get("total_estimated_cost") or 0
+        if sqft <= 0 or total <= 0:
+            continue
+        unit = total / sqft
+        overall.append(unit)
+        d = extract_district(h.get("address", ""))
+        if d:
+            by_district.setdefault(d, []).append(unit)
+
+    baseline: Dict[str, float] = {}
+    if overall:
+        baseline[""] = statistics.median(overall)
+    for d, vals in by_district.items():
+        if len(vals) >= MARKET_MIN_SAMPLE:
+            baseline[d] = statistics.median(vals)
+    return baseline
+
+
+def annotate_market(house: Dict[str, Any], baseline: Dict[str, float]) -> Optional[Dict[str, Any]]:
+    """標註這筆房源相對於同區行情的位置。資料不足就回傳 None（前端不顯示）。"""
+    sqft = parse_sqft(house.get("size"))
+    total = (house.get("cost_info") or {}).get("total_estimated_cost") or 0
+    if sqft <= 0 or total <= 0 or not baseline:
+        return None
+
+    district = extract_district(house.get("address", ""))
+    median = baseline.get(district)
+    scope = district
+    if median is None:
+        median = baseline.get("")
+        scope = "全部區域"
+    if not median:
+        return None
+
+    unit = total / sqft
+    diff_pct = (unit - median) / median * 100
+
+    level, label = MARKET_LEVEL_TOP
+    for threshold, lv, lb in MARKET_LEVELS:
+        if diff_pct < threshold:
+            level, label = lv, lb
+            break
+
+    return {
+        "scope": scope,
+        "unit_cost": round(unit),
+        "median_unit_cost": round(median),
+        "diff_pct": round(diff_pct),
+        "level": level,
+        "label": label,
+    }
+
+
+def annotate_price_drop(house: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """從 price_history 整理出降價資訊。沒降過價就回傳 None。
+
+    price_history 一直都有在寫入，但過去前端完全沒有拿來顯示。
+    """
+    raw = house.get("price_history")
+    if not raw:
+        return None
+    try:
+        history = json.loads(raw) if isinstance(raw, str) else raw
+    except Exception:
+        return None
+    if not isinstance(history, list) or len(history) < 2:
+        return None
+
+    nums = [h.get("numeric") for h in history if isinstance(h.get("numeric"), (int, float)) and h.get("numeric") > 0]
+    if len(nums) < 2:
+        return None
+
+    first, current = nums[0], nums[-1]
+    if current >= first:
+        return None
+
+    return {
+        "original_price": first,
+        "current_price": current,
+        "total_drop": first - current,
+        "drop_pct": round((first - current) / first * 100, 1),
+        "change_count": len(nums) - 1,
+        "last_change_time": history[-1].get("time", ""),
+        "history": [{"price": h.get("numeric"), "time": h.get("time", "")}
+                    for h in history if isinstance(h.get("numeric"), (int, float))],
+    }
 
 # 儀表板 /api/houses 的記憶體快取存續秒數
 CACHE_TTL_SECONDS = 5
@@ -36,6 +169,17 @@ def get_formatted_houses(db, scraper):
         h["cost_info"] = parse_rental_costs(full_text, h.get("price", "0"))
         h["couples_warnings"] = scraper.detect_couples_warnings(full_text)
         h["couples_features"] = scraper.detect_couples_features(full_text)
+        h["price_drop"] = annotate_price_drop(h)
+
+    # 行情基準線要先看過全部房源才算得出中位數，因此獨立跑第二輪
+    baseline = build_market_baseline(houses)
+    for h in houses:
+        h["market"] = annotate_market(h, baseline)
+
+    # 通勤時間：只讀快取，不在這裡打 API（避免拖慢儀表板回應）
+    commute_cache = db.get_commute_cache() if commute.is_enabled() else {}
+    for h in houses:
+        h["commute"] = commute.summarize(commute_cache.get(h.get("address", "")))
 
     _HOUSES_CACHE = houses
     _CACHE_LAST_UPDATE = now
@@ -194,6 +338,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .house-card.rated-none { border-color: rgba(139, 92, 246, 0.3); }
         .house-card.status-off_market { opacity: 0.55; filter: grayscale(0.4); background: rgba(15, 23, 42, 0.7); }
 
+        /* 行情基準線 */
+        .badge-market { display:inline-block; padding:4px 10px; border-radius:8px; font-size:0.78rem; font-weight:700; border:1px solid; }
+        .market-cheap     { background:rgba(16,185,129,0.18); color:#34d399; border-color:rgba(16,185,129,0.35); }
+        .market-below     { background:rgba(16,185,129,0.10); color:#6ee7b7; border-color:rgba(16,185,129,0.25); }
+        .market-fair      { background:rgba(148,163,184,0.12); color:#cbd5e1; border-color:rgba(148,163,184,0.25); }
+        .market-above     { background:rgba(249,115,22,0.12);  color:#fb923c; border-color:rgba(249,115,22,0.3); }
+        .market-expensive { background:rgba(239,68,68,0.15);   color:#f87171; border-color:rgba(239,68,68,0.35); }
+        .market-detail { font-size:0.72rem; color:var(--text-dim); margin-top:4px; }
+
+        /* 降價歷史 */
+        .badge-drop { display:inline-block; padding:4px 10px; border-radius:8px; font-size:0.78rem; font-weight:700;
+                      background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.35); }
+        .drop-detail { font-size:0.72rem; color:var(--text-dim); margin-top:4px; }
+        .drop-detail s { opacity:0.7; }
+
+        /* 通勤時間 */
+        .commute-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+        .commute-tag { display:inline-flex; align-items:center; gap:4px; padding:4px 9px; border-radius:8px;
+                       font-size:0.75rem; font-weight:600; background:rgba(59,130,246,0.12);
+                       color:#93c5fd; border:1px solid rgba(59,130,246,0.28); }
+        .commute-fast { background:rgba(16,185,129,0.14); color:#6ee7b7; border-color:rgba(16,185,129,0.3); }
+        .commute-slow { background:rgba(249,115,22,0.12); color:#fb923c; border-color:rgba(249,115,22,0.3); }
+
         .house-card:hover {
             transform: translateY(-3px); border-color: rgba(56, 189, 248, 0.4);
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
@@ -336,6 +503,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <option value="rent_asc">排序：刊登租金 (低 ➔ 高)</option>
                     <option value="size_desc">排序：坪數 (大 ➔ 小)</option>
                     <option value="time_desc">排序：最新上架/更新時間</option>
+                    <option value="market_asc">排序：相對行情 (便宜 ➔ 貴)</option>
+                    <option value="commute_asc">排序：通勤時間 (短 ➔ 長)</option>
+                    <option value="drop_desc">排序：降價幅度 (大 ➔ 小)</option>
                 </select>
             </div>
         </div>
@@ -475,6 +645,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="pill ${currentFilter === 'taipower' ? 'active' : ''}" data-filter="taipower" onclick="setFilter('taipower', this)">✨ 台電神房</div>
                 <div class="pill ${currentFilter === 'balcony' ? 'active' : ''}" data-filter="balcony" onclick="setFilter('balcony', this)">🧺 有獨立陽台</div>
                 <div class="pill ${currentFilter === 'washing' ? 'active' : ''}" data-filter="washing" onclick="setFilter('washing', this)">🧺 獨立洗衣機</div>
+                <div class="pill ${currentFilter === 'below_market' ? 'active' : ''}" data-filter="below_market" onclick="setFilter('below_market', this)">🟢 低於行情 (${allHouses.filter(h => h.market && (h.market.level === 'cheap' || h.market.level === 'below')).length})</div>
+                <div class="pill ${currentFilter === 'dropped' ? 'active' : ''}" data-filter="dropped" onclick="setFilter('dropped', this)">📉 有降價 (${allHouses.filter(h => h.price_drop).length})</div>
+                ${allHouses.some(h => h.commute) ? `<div class="pill ${currentFilter === 'commute30' ? 'active' : ''}" data-filter="commute30" onclick="setFilter('commute30', this)">🚇 通勤 30 分內 (${allHouses.filter(h => h.commute && h.commute.max_minutes <= 30).length})</div>` : ''}
             `;
 
             const districtPillsHtml = Array.from(presentDistricts).sort().map(d => `
@@ -562,6 +735,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 if (currentFilter === 'taipower') return h.cost_info && h.cost_info.is_taipower;
                 if (currentFilter === 'balcony') return SYNONYM_GROUPS[1].some(kw => fullText.includes(kw));
                 if (currentFilter === 'washing') return SYNONYM_GROUPS[2].some(kw => fullText.includes(kw));
+                if (currentFilter === 'below_market') return h.market && (h.market.level === 'cheap' || h.market.level === 'below');
+                if (currentFilter === 'dropped') return !!h.price_drop;
+                if (currentFilter === 'commute30') return h.commute && h.commute.max_minutes <= 30;
                 if (currentFilter !== 'all') return (h.address || '').includes(currentFilter);
 
                 return true;
@@ -580,10 +756,66 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 if (sortVal === 'rent_asc') return rentA - rentB;
                 if (sortVal === 'size_desc') return parseSqft(b.size) - parseSqft(a.size);
                 if (sortVal === 'time_desc') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+                if (sortVal === 'commute_asc') {
+                    // 沒有通勤資料的排到最後
+                    const ca = a.commute ? a.commute.max_minutes : 99999;
+                    const cb = b.commute ? b.commute.max_minutes : 99999;
+                    return ca - cb;
+                }
+                if (sortVal === 'market_asc') {
+                    const ma = a.market ? a.market.diff_pct : 99999;
+                    const mb = b.market ? b.market.diff_pct : 99999;
+                    return ma - mb;
+                }
+                if (sortVal === 'drop_desc') {
+                    const da = a.price_drop ? a.price_drop.total_drop : -1;
+                    const dbv = b.price_drop ? b.price_drop.total_drop : -1;
+                    return dbv - da;
+                }
                 return 0;
             });
 
             renderGrid(filtered);
+        }
+
+        function esc(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function renderMarket(m) {
+            if (!m) return '';
+            const sign = m.diff_pct > 0 ? '+' : '';
+            return `
+                <div style="margin-top:10px;">
+                    <span class="badge-market market-${esc(m.level)}">${esc(m.label)} ${sign}${m.diff_pct}%</span>
+                    <div class="market-detail">
+                        每坪 ${m.unit_cost.toLocaleString()} 元 ・ ${esc(m.scope)}中位數 ${m.median_unit_cost.toLocaleString()} 元
+                    </div>
+                </div>`;
+        }
+
+        function renderPriceDrop(d) {
+            if (!d) return '';
+            const times = d.change_count > 1 ? `，共調整 ${d.change_count} 次` : '';
+            return `
+                <div style="margin-top:8px;">
+                    <span class="badge-drop">📉 已降 ${d.total_drop.toLocaleString()} 元 (${d.drop_pct}%)</span>
+                    <div class="drop-detail">
+                        <s>${d.original_price.toLocaleString()}</s> ➔ ${d.current_price.toLocaleString()} 元${times}
+                        ${d.last_change_time ? '・最近 ' + esc(d.last_change_time.slice(0, 10)) : ''}
+                    </div>
+                </div>`;
+        }
+
+        function renderCommute(c) {
+            if (!c || !c.items || !c.items.length) return '';
+            const tags = c.items.map(i => {
+                const cls = i.minutes <= 25 ? 'commute-fast' : (i.minutes >= 45 ? 'commute-slow' : '');
+                return `<span class="commute-tag ${cls}">🚇 ${esc(i.dest)} ${i.minutes} 分</span>`;
+            }).join('');
+            return `<div class="commute-row">${tags}</div>`;
         }
 
         function renderGrid(houses) {
@@ -610,27 +842,30 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                             ${hasSubsidy && status !== 'off_market' ? '<div class="badge-taipower" style="background:rgba(16, 185, 129, 0.15); color:#34d399; border-color:rgba(16, 185, 129, 0.3);">📜 可申請租屋補助</div>' : ''}
                             ${cost.is_taipower && status !== 'off_market' ? '<div class="badge-taipower">✨ 台電省錢神房 (台電計費)</div>' : (!hasSubsidy && status !== 'off_market' ? '<div class="badge-normal">🏠 特選優質物件</div>' : '')}
                             ${rating === 'none' && status !== 'off_market' ? '<div class="badge-unrated">❓ 尚未評分</div>' : ''}
-                            <a href="${h.link}" target="_blank" class="house-title">${h.title}</a>
+                            <a href="${esc(h.link)}" target="_blank" rel="noopener noreferrer" class="house-title">${esc(h.title)}</a>
                         </div>
                         <div class="meta-pills">
-                            <span class="meta-tag">📍 ${cleanAddr}</span>
-                            <span class="meta-tag">📐 ${h.size || '未提供坪數'}</span>
-                            <span class="meta-tag">🆔 ${h.house_id}</span>
+                            <span class="meta-tag">📍 ${esc(cleanAddr)}</span>
+                            <span class="meta-tag">📐 ${esc(h.size || '未提供坪數')}</span>
+                            <span class="meta-tag">🆔 ${esc(h.house_id)}</span>
                         </div>
                         <div class="cost-block">
                             <div class="cost-title">預估真實月總成本 (${cost.electricity_kwh || 400}度用電)</div>
                             <div class="cost-amount">${cost.total_estimated_cost_str || h.price}</div>
+                            ${renderMarket(h.market)}
+                            ${renderPriceDrop(h.price_drop)}
                             <div class="cost-details">
-                                <div>💰 租金: ${h.price}</div>
-                                <div>🏢 管理費/額外費: ${cost.management_desc || '0元'}</div>
-                                <div>⚡ 電費: ${cost.electricity_desc || '內含'}</div>
-                                <div>💧 水雜費: ${cost.water_desc || '0元'}</div>
+                                <div>💰 租金: ${esc(h.price)}</div>
+                                <div>🏢 管理費/額外費: ${esc(cost.management_desc || '0元')}</div>
+                                <div>⚡ 電費: ${esc(cost.electricity_desc || '內含')}</div>
+                                <div>💧 水雜費: ${esc(cost.water_desc || '0元')}</div>
                             </div>
                         </div>
+                        ${renderCommute(h.commute)}
                         <div class="tags-section">
-                            ${warnings.map(w => `<div class="tag-warning">${w}</div>`).join('')}
+                            ${warnings.map(w => `<div class="tag-warning">${esc(w)}</div>`).join('')}
                             <div>
-                                ${features.map(f => `<span class="tag-feature">${f}</span>`).join('')}
+                                ${features.map(f => `<span class="tag-feature">${esc(f)}</span>`).join('')}
                             </div>
                         </div>
                         

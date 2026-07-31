@@ -13,6 +13,7 @@ from notifier import DiscordNotifier
 from scraper import RentalScraper
 from cost_calculator import parse_rental_costs
 from dashboard import run_dashboard_server, PORT
+import commute
 
 # 配置 Logging 日誌紀錄
 logging.basicConfig(
@@ -92,6 +93,12 @@ class HousingMonitorApp:
 
             if not new_houses and not price_drop_houses:
                 logger.info("沒有全新上架或未刊登物件，亦無既有物件降價，無須發送通知。")
+
+            # 補查新地址的通勤時間（未設定 GOOGLE_MAPS_API_KEY 時自動略過）
+            try:
+                commute.backfill(self.db)
+            except Exception as e:
+                logger.error(f"通勤時間補查失敗（不影響巡邏）: {e}")
 
         except Exception as e:
             logger.error(f"檢查任務執行過程中發生異常: {e}", exc_info=True)
