@@ -1,5 +1,26 @@
 [
   {
+    "house_id": "19238369",
+    "title": "南京復興站~面寬安靜.明亮平面套房",
+    "price": "20,000元/月",
+    "numeric_price": 20000,
+    "address": "中山區長春路",
+    "size": "11坪",
+    "link": "https://rent.591.com.tw/19238369",
+    "address_fingerprint": "中山區長春路_11.0坪",
+    "price_history": "[{\"price\": \"20,000元/月\", \"numeric\": 20000, \"time\": \"2026-08-03 04:04:39\"}]",
+    "details_text": "置頂 南京復興站~面寬安靜.明亮平面套房 近捷運 新上架 拎包入住 近商圈 有電梯 隨時可遷入 獨立套房 11坪 5F/7F 無 中山區-長春路 距南京復興 165公尺 仲介呂先生 9分鐘內更新 昨日0人瀏覽 20,000 元/月 (租金含管理費) 可開伙 獨立套房 11坪 5F/7F 電梯大樓 20,000 元/月 二個月 租金含管理費 總支出試算 位置與周邊 地 址: 中山區長春路 所屬社區: 無 交通 距 南京復興站 165 公尺 距 臺北小巨 總支出試算&gt; 租金 20,000元/月 押金 二個月 服務費 收取服務費 租金含 管理費 仲介: 呂先生 (收服務費) 經紀業: 住訊房屋有限公司 0983-535-399 0983-535-399 此",
+    "user_rating": "none",
+    "status": "active",
+    "missing_count": 0,
+    "created_at": "2026-08-03 04:04:39",
+    "updated_at": "2026-08-03 04:04:39",
+    "duplicate_of": null,
+    "excluded_by": null,
+    "mrt_station": "南京復興",
+    "mrt_distance": 165
+  },
+  {
     "house_id": "21749981",
     "title": "捷運民權西路站步行一分鐘電梯華廈方正1+1房、鄰近南京西商圈",
     "price": "30,000元/月",
@@ -80,8 +101,8 @@
     "updated_at": "2026-08-03 03:43:29",
     "duplicate_of": null,
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "民權西路",
+    "mrt_distance": 285
   },
   {
     "house_id": "21731434",
@@ -1256,8 +1277,8 @@
     "updated_at": "2026-08-03 03:54:54",
     "duplicate_of": null,
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "忠孝復興",
+    "mrt_distance": 294
   },
   {
     "house_id": "21739059",
@@ -1298,8 +1319,8 @@
     "updated_at": "2026-08-03 03:15:06",
     "duplicate_of": "21734091",
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "忠孝敦化",
+    "mrt_distance": 120
   },
   {
     "house_id": "21754413",
@@ -1319,8 +1340,8 @@
     "updated_at": "2026-08-03 03:56:28",
     "duplicate_of": null,
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "中山國小",
+    "mrt_distance": 304
   },
   {
     "house_id": "21754414",
@@ -1340,8 +1361,8 @@
     "updated_at": "2026-08-03 03:15:06",
     "duplicate_of": "21659285",
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "雙連",
+    "mrt_distance": 692
   },
   {
     "house_id": "21747158",
@@ -1802,8 +1823,8 @@
     "updated_at": "2026-08-03 02:08:23",
     "duplicate_of": "21549390",
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "忠孝敦化",
+    "mrt_distance": 339
   },
   {
     "house_id": "21751660",
@@ -2369,8 +2390,8 @@
     "updated_at": "2026-08-01 04:22:42",
     "duplicate_of": "21714098",
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "松江南京",
+    "mrt_distance": 506
   },
   {
     "house_id": "21602212",
@@ -2390,8 +2411,8 @@
     "updated_at": "2026-08-01 04:22:42",
     "duplicate_of": "21605272",
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "中山",
+    "mrt_distance": 142
   },
   {
     "house_id": "21742153",
@@ -4490,8 +4511,8 @@
     "updated_at": "2026-07-31 09:45:47",
     "duplicate_of": null,
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "忠孝復興",
+    "mrt_distance": 224
   },
   {
     "house_id": "21686561",
@@ -4511,8 +4532,8 @@
     "updated_at": "2026-07-31 09:45:53",
     "duplicate_of": null,
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "中山國小",
+    "mrt_distance": 282
   },
   {
     "house_id": "21726844",
@@ -4658,8 +4679,8 @@
     "updated_at": "2026-07-31 09:45:47",
     "duplicate_of": null,
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "中山",
+    "mrt_distance": 634
   },
   {
     "house_id": "21669745",
@@ -4889,8 +4910,8 @@
     "updated_at": "2026-07-31 09:45:47",
     "duplicate_of": "21714098",
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "忠孝新生",
+    "mrt_distance": 426
   },
   {
     "house_id": "21660315",
@@ -4910,8 +4931,8 @@
     "updated_at": "2026-07-31 09:45:47",
     "duplicate_of": null,
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "行天宮",
+    "mrt_distance": 436
   },
   {
     "house_id": "14604157",
@@ -6359,8 +6380,8 @@
     "updated_at": "2026-07-31 09:45:51",
     "duplicate_of": null,
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "劍南路",
+    "mrt_distance": 116
   },
   {
     "house_id": "21710950",
@@ -6737,8 +6758,8 @@
     "updated_at": "2026-07-31 09:45:47",
     "duplicate_of": null,
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "松江南京",
+    "mrt_distance": 562
   },
   {
     "house_id": "21666304",
@@ -6758,8 +6779,8 @@
     "updated_at": "2026-07-31 09:45:48",
     "duplicate_of": null,
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "中山國小",
+    "mrt_distance": 195
   },
   {
     "house_id": "21689208",
@@ -6779,8 +6800,8 @@
     "updated_at": "2026-07-31 09:45:54",
     "duplicate_of": null,
     "excluded_by": null,
-    "mrt_station": null,
-    "mrt_distance": null
+    "mrt_station": "中山國小",
+    "mrt_distance": 393
   },
   {
     "house_id": "21709899",
