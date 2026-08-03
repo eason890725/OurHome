@@ -7,6 +7,7 @@ import sqlite3
 import logging
 import base64
 import requests
+from contextlib import contextmanager
 from datetime import datetime
 from difflib import SequenceMatcher
 from typing import Optional, Dict, List, Tuple, Any
@@ -177,8 +178,17 @@ class HousingDB:
         self._master_loaded = False
         self._init_db()
 
-    def _get_connection(self) -> sqlite3.Connection:
-        """建立具備 WAL 高併發模式與 30 秒解鎖緩衝的 SQLite 連線"""
+    @contextmanager
+    def _get_connection(self):
+        """建立具備 WAL 高併發模式與 30 秒解鎖緩衝的 SQLite 連線，離開時確實關閉。
+
+        ⚠️ 這裡必須是 context manager，不能直接回傳 sqlite3.Connection。
+        `with sqlite3.connect(...) as conn:` 只會 commit／rollback，**不會 close**，
+        因此每呼叫一次就洩漏一條連線與它的 page cache。
+        儀表板每次 /api/houses 都會走到 get_all_houses()，累積下來造成
+        gunicorn worker 記憶體一路往上長（實測 103MB → 441MB），最後撞上
+        Render 的 512MB 上限。
+        """
         conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row
         try:
@@ -186,7 +196,17 @@ class HousingDB:
             conn.execute("PRAGMA synchronous=NORMAL;")
         except Exception:
             pass
-        return conn
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            raise
+        finally:
+            conn.close()
 
     def _init_db(self):
         with self._get_connection() as conn:
@@ -237,6 +257,12 @@ class HousingDB:
             # 記錄關鍵字而不是直接刪除，使用者調整清單後才能回溯生效，也才知道為什麼被濾掉。
             if "excluded_by" not in columns:
                 cursor.execute("ALTER TABLE houses ADD COLUMN excluded_by TEXT")
+            # 591 卡片上直接標示的最近捷運站與距離。爬蟲一直有抓，但先前沒有存下來，
+            # 導致通勤估算只能退回從標題／內文猜。
+            if "mrt_station" not in columns:
+                cursor.execute("ALTER TABLE houses ADD COLUMN mrt_station TEXT")
+            if "mrt_distance" not in columns:
+                cursor.execute("ALTER TABLE houses ADD COLUMN mrt_distance INTEGER")
 
             conn.commit()
 
@@ -247,6 +273,7 @@ class HousingDB:
         # 實際發生過：服務每 2.5 分鐘重啟，去重標記全部歸零、儀表板又出現大量重複。
         try:
             from config import EXCLUDE_KEYWORDS as _EXCLUDE
+            self.compact_oversized_details()
             self.apply_exclude_keywords(_EXCLUDE)
             self.dedupe_existing()
         except Exception as e:
@@ -452,8 +479,8 @@ class HousingDB:
                         # 漏掉的話，每次重啟從備份還原就會把去重與關鍵字過濾的結果清空，
                         # 而重建這些標記要等下一輪巡邏跑完——巡邏若被中斷就永遠補不回來。
                         cursor.execute("""
-                            INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, user_rating, status, missing_count, duplicate_of, excluded_by, created_at, updated_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, user_rating, status, missing_count, duplicate_of, excluded_by, mrt_station, mrt_distance, created_at, updated_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, (
                             house_id,
                             sanitize_text(h.get("title", "")),
@@ -470,6 +497,8 @@ class HousingDB:
                             h.get("missing_count", 0),
                             h.get("duplicate_of") or None,
                             h.get("excluded_by") or None,
+                            sanitize_text(h.get("mrt_station", "")) or None,
+                            h.get("mrt_distance") or None,
                             h.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
                             h.get("updated_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         ))
@@ -605,6 +634,43 @@ class HousingDB:
                     return str(row["house_id"])
         return None
 
+    # details_text 超過這個長度就壓縮。留一點餘裕，避免每次啟動都反覆改寫。
+    DETAILS_COMPACT_THRESHOLD = 2000
+
+    def compact_oversized_details(self) -> int:
+        """把過長的 details_text 壓成費用相關片段，回傳處理筆數。
+
+        曾經因為「以整行為單位擷取」而在壓縮過的 HTML 上取到整份文件，
+        每筆 details_text 平均 43,000 字元、備份檔膨脹到 17MB。
+        這個欄位每次儀表板重建都會被載入並跑 regex，是記憶體一路往上長的主因。
+        """
+        try:
+            from scraper import compact_details_text
+        except Exception as e:
+            logger.debug(f"無法載入壓縮函式: {e}")
+            return 0
+
+        fixed = 0
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            rows = cursor.execute(
+                "SELECT house_id, details_text FROM houses "
+                "WHERE details_text IS NOT NULL AND LENGTH(details_text) > ?",
+                (self.DETAILS_COMPACT_THRESHOLD,)
+            ).fetchall()
+
+            for r in rows:
+                compacted = compact_details_text(r["details_text"])
+                if compacted and len(compacted) < len(r["details_text"]):
+                    cursor.execute("UPDATE houses SET details_text = ? WHERE house_id = ?",
+                                   (compacted, r["house_id"]))
+                    fixed += 1
+            conn.commit()
+
+        if fixed:
+            logger.info(f"🗜️ 已壓縮 {fixed} 筆過長的 details_text")
+        return fixed
+
     def apply_exclude_keywords(self, keywords: List[str]) -> Tuple[int, int]:
         """依目前的排除關鍵字清單，回頭重新檢查所有既有房源。
 
@@ -709,8 +775,8 @@ class HousingDB:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT house_id, price, numeric_price, price_history, user_rating, status, missing_count "
-                "FROM houses WHERE house_id = ?", (house_id,)
+                "SELECT house_id, price, numeric_price, price_history, user_rating, status, "
+                "missing_count, mrt_station FROM houses WHERE house_id = ?", (house_id,)
             )
             row = cursor.fetchone()
 
@@ -729,8 +795,8 @@ class HousingDB:
                 ], ensure_ascii=False)
 
                 cursor.execute("""
-                    INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, user_rating, status, missing_count, duplicate_of, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, user_rating, status, missing_count, duplicate_of, mrt_station, mrt_distance, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     house_id,
                     title,
@@ -746,6 +812,8 @@ class HousingDB:
                     status,
                     0,
                     dup_of,
+                    sanitize_text(house_data.get("mrt_station", "")) or None,
+                    house_data.get("mrt_distance") or None,
                     now_str,
                     now_str
                 ))
@@ -807,6 +875,16 @@ class HousingDB:
                         cursor.execute(
                             "UPDATE houses SET status = ?, missing_count = 0, updated_at = ? WHERE house_id = ?",
                             (status, now_str, house_id)
+                        )
+                        conn.commit()
+
+                    # 補上舊資料缺少的捷運站欄位（爬蟲一直有抓，只是以前沒存）。
+                    # 這是補資料而非狀態變更，不改 updated_at。
+                    station = sanitize_text(house_data.get("mrt_station", "")) or None
+                    if station and not row["mrt_station"]:
+                        cursor.execute(
+                            "UPDATE houses SET mrt_station = ?, mrt_distance = ? WHERE house_id = ?",
+                            (station, house_data.get("mrt_distance") or None, house_id)
                         )
                         conn.commit()
                     return {"action": "IGNORE"}

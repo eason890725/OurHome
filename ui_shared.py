@@ -214,7 +214,7 @@ def get_formatted_houses(db, scraper=None):
         h["commute"] = commute.estimate(
             h.get("title", ""),
             fallback_text=h.get("details_text", ""),
-            known_station=h.get("mrt_station"),
+            known_station=h.get("mrt_station"),      # 591 卡片直接標示的，最可靠
             walk_distance_m=h.get("mrt_distance"),
         )
 

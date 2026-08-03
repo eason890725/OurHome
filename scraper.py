@@ -159,6 +159,74 @@ def parse_list_html(html: str) -> List[Dict[str, Any]]:
     return results
 
 
+# 費用相關關鍵字，用來從內頁挑出有用的片段。
+# 這份清單必須涵蓋 cost_calculator 會比對的所有字樣，漏掉就等於在壓縮時把
+# 判斷依據丟掉——實測漏了「台電」「含水」時，48 筆的電費從台電計價
+# （2.5 元/度）退回預設的 5 元/度，每筆多算 1,000 元。
+FEE_KEYS = (
+    "管理費", "額外費用", "含管", "包管", "免管", "不收管理費",
+    "電費", "台電", "台灣電力", "公電", "一度", "1度", "元/度", "度電",
+    "水費", "台水", "包水", "含水", "免水", "不收水費",
+    "租金包含", "租金含", "清潔費", "垃圾", "代收",
+)
+# details_text 的長度上限。這個欄位會進資料庫、進備份 JSON、也會被每次
+# 儀表板重建時載入並跑 regex，放任它成長會直接反映在記憶體上。
+# 1500 是實測折衷：太短會把排在後面的「台水台電」之類關鍵資訊截掉，
+# 而 1500 × 342 筆也才 0.5MB，相較原本的 14.3MB 仍是數量級的差距。
+DETAILS_MAX_CHARS = 1500
+
+# 591 頁面內嵌了「站名 + 經緯度」的捷運站清單，裡面的「台電大樓站」
+# 曾被誤判成「依台電計費」而讓電費少算一半。
+# 這裡整組剔除（站名連同座標），而不是丟掉整個片段——
+# 直接丟片段會把座標旁邊真正的費用資訊一起丟掉。
+_STATION_COORD_PATTERN = re.compile(
+    r'"?[^",\s]{0,12}"?\s*,\s*\d+\.\d{4,}\s*,\s*\d+\.\d{4,}\s*(?:,\s*\d+)?'
+)
+
+
+def compact_details_text(raw: str, max_chars: int = DETAILS_MAX_CHARS) -> str:
+    """從內頁文字中萃取費用相關片段，並限制總長度。
+
+    不能用「整行」為單位擷取：591 的頁面是壓縮過的，整份文件可能只有幾行，
+    只要某一行含「元/月」，那一行就是整頁——曾經因此讓每筆 details_text
+    平均高達 43,000 字元、備份檔膨脹到 17MB。
+    改為在關鍵字周邊取固定寬度的窗格，並整體截斷。
+    """
+    if not raw:
+        return ""
+    text = re.sub(r'<script.*?</script>', ' ', raw, flags=re.S | re.I)   # 順便去掉 JSON-LD
+    text = re.sub(r'<style.*?</style>', ' ', text, flags=re.S | re.I)
+    text = re.sub(r'<[^>]+>', ' ', text)
+    text = _STATION_COORD_PATTERN.sub(' ', text)     # 剔除內嵌的捷運站座標清單
+    text = re.sub(r'\s+', ' ', text)
+
+    spans = []
+    for key in FEE_KEYS:
+        start = 0
+        while True:
+            idx = text.find(key, start)
+            if idx < 0:
+                break
+            start = idx + 1
+            spans.append((max(0, idx - 40), min(len(text), idx + 60)))
+            if len(spans) > 40:
+                break
+
+    if not spans:
+        return text[:max_chars].strip()
+
+    spans.sort()
+    merged = [spans[0]]
+    for s, e in spans[1:]:
+        if s <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], e))
+        else:
+            merged.append((s, e))
+
+    out = " ".join(text[s:e] for s, e in merged).strip()
+    return out[:max_chars]
+
+
 def clean_address_string(raw_addr: str) -> str:
     """清理地址字串，剔除『依現場』等前綴與『整層住家出租』等後綴噪訊字詞"""
     if not raw_addr:
@@ -269,18 +337,7 @@ class RentalScraper:
                     if m_addr:
                         exact_address = clean_address_string(m_addr.group(1).strip())
 
-                # 先用關鍵字篩掉絕大多數行，再對留下來的少數行做 regex，
-                # 並在收滿 15 行就停止。原本是先把整頁每一行都跑一次 regex 再篩，
-                # 那會為每個房源額外配置一份與整頁等大的字串串列。
-                FEE_KEYS = ("費用", "管理費", "電費", "水費", "租金包含", "元/月", "一度", "額外費用")
-                fee_lines = []
-                for line in html_text.split('\n'):
-                    if not line.strip() or not any(k in line for k in FEE_KEYS):
-                        continue
-                    fee_lines.append(re.sub(r'<[^>]+>', ' ', line).strip())
-                    if len(fee_lines) >= 15:
-                        break
-                details_text = " ".join(fee_lines)
+                details_text = compact_details_text(html_text)
 
         except Exception as e:
             logger.debug(f"HTTP GET 補充內頁失敗 [{house_id}]: {e}")
@@ -401,7 +458,9 @@ class RentalScraper:
                 "mrt_station": item["station"],
                 "mrt_distance": item["station_distance"],
                 "link": item["link"],
-                "details_text": f"{full_text} {details_text}",
+                # 卡片文字 + 內頁費用片段，並再次整體截斷。
+                # 這個欄位每次儀表板重建都會被載入並跑 regex，長度必須有上限。
+                "details_text": f"{full_text} {details_text}".strip()[:DETAILS_MAX_CHARS * 2],
                 "status": "off_market" if is_off_market else "active",
             })
 
