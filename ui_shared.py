@@ -125,6 +125,9 @@ def collapse_duplicates(houses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         h.setdefault("duplicates", [])
 
     for h in houses:
+        # 命中排除關鍵字的直接不進列表（仍留在資料庫，關鍵字拿掉就會回來）
+        if h.get("excluded_by"):
+            continue
         dup_of = h.get("duplicate_of")
         parent = by_id.get(str(dup_of)) if dup_of else None
         if parent is not None and parent is not h:

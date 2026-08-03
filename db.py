@@ -233,10 +233,24 @@ class HousingDB:
             # 刻意「標記」而非「丟棄」：誤判時資料還在，儀表板展開就看得到。
             if "duplicate_of" not in columns:
                 cursor.execute("ALTER TABLE houses ADD COLUMN duplicate_of TEXT")
+            # 命中排除關鍵字時記下是哪一個。NULL = 沒被排除。
+            # 記錄關鍵字而不是直接刪除，使用者調整清單後才能回溯生效，也才知道為什麼被濾掉。
+            if "excluded_by" not in columns:
+                cursor.execute("ALTER TABLE houses ADD COLUMN excluded_by TEXT")
 
             conn.commit()
-            
+
         self.restore_from_backup_json()
+
+        # 還原之後立刻重建去重與關鍵字排除的標記。
+        # 不能只依賴巡邏結束時才做——巡邏一旦被中斷（例如容器重啟）就永遠補不回來。
+        # 實際發生過：服務每 2.5 分鐘重啟，去重標記全部歸零、儀表板又出現大量重複。
+        try:
+            from config import EXCLUDE_KEYWORDS as _EXCLUDE
+            self.apply_exclude_keywords(_EXCLUDE)
+            self.dedupe_existing()
+        except Exception as e:
+            logger.error(f"啟動時重建去重／排除標記失敗（不影響服務）: {e}")
 
     def sync_backup_json(self, force_push: bool = False):
         """僅在 DB 內容實質變更 (Hash 改變) 時，才寫入硬碟並呼叫 GitHub API。
@@ -434,9 +448,12 @@ class HousingDB:
                         else:
                             history_str = str(history_val)
 
+                        # duplicate_of / excluded_by 一定要一起還原。
+                        # 漏掉的話，每次重啟從備份還原就會把去重與關鍵字過濾的結果清空，
+                        # 而重建這些標記要等下一輪巡邏跑完——巡邏若被中斷就永遠補不回來。
                         cursor.execute("""
-                            INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, user_rating, status, missing_count, created_at, updated_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            INSERT INTO houses (house_id, title, price, numeric_price, address, size, link, address_fingerprint, price_history, details_text, user_rating, status, missing_count, duplicate_of, excluded_by, created_at, updated_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, (
                             house_id,
                             sanitize_text(h.get("title", "")),
@@ -451,6 +468,8 @@ class HousingDB:
                             h.get("user_rating", "none"),
                             h.get("status", "active"),
                             h.get("missing_count", 0),
+                            h.get("duplicate_of") or None,
+                            h.get("excluded_by") or None,
                             h.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
                             h.get("updated_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         ))
@@ -585,6 +604,42 @@ class HousingDB:
                 if self.is_precise_duplicate(house_data, dict(row)):
                     return str(row["house_id"])
         return None
+
+    def apply_exclude_keywords(self, keywords: List[str]) -> Tuple[int, int]:
+        """依目前的排除關鍵字清單，回頭重新檢查所有既有房源。
+
+        回傳 (新標記為排除的筆數, 解除排除的筆數)。
+
+        過濾原本只在物件第一次被抓到時執行，因此使用者在 .env 加了新關鍵字之後，
+        既有的房源不會有任何變化。這個方法讓清單調整能回溯生效；
+        反過來把關鍵字拿掉時，先前被排除的也會自動放回來。
+        """
+        marked = unmarked = 0
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            rows = cursor.execute(
+                "SELECT house_id, title, details_text, address, excluded_by FROM houses"
+            ).fetchall()
+
+            for r in rows:
+                text = f"{r['title'] or ''} {r['address'] or ''} {r['details_text'] or ''}"
+                hit = next((kw for kw in keywords if kw and kw in text), None)
+                current = r["excluded_by"]
+                if hit == current:
+                    continue
+                cursor.execute("UPDATE houses SET excluded_by = ? WHERE house_id = ?",
+                               (hit, r["house_id"]))
+                if hit:
+                    marked += 1
+                    logger.info(f"🚫 [關鍵字排除] [{r['house_id']}] {(r['title'] or '')[:20]} ← 命中「{hit}」")
+                else:
+                    unmarked += 1
+                    logger.info(f"↩️ [關鍵字排除] 解除 [{r['house_id']}] {(r['title'] or '')[:20]}")
+            conn.commit()
+
+        if marked or unmarked:
+            logger.info(f"🚫 關鍵字過濾更新：新排除 {marked} 筆、解除 {unmarked} 筆")
+        return marked, unmarked
 
     def dedupe_existing(self) -> int:
         """回頭掃描既有資料，把重複刊登標記到主物件上，回傳新標記的筆數。

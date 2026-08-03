@@ -12,14 +12,42 @@ MODE = os.getenv("MODE", "couple").lower()
 
 if MODE == "single":
     DEFAULT_ELECTRICITY_KWH = 200
-    MIN_SIZE_SQFT = 4.0
-    EXCLUDE_KEYWORDS = ["頂加", "暗房", "頂樓加蓋", "事故屋", "凶宅"]
+    _DEFAULT_MIN_SIZE = 4.0
+    _DEFAULT_EXCLUDE = ["頂加", "暗房", "頂樓加蓋", "事故屋", "凶宅"]
     MODE_LABEL = "單人居住"
 else:
     DEFAULT_ELECTRICITY_KWH = 400
-    MIN_SIZE_SQFT = 7.0
-    EXCLUDE_KEYWORDS = ["限單人", "限單身", "限女", "頂加", "暗房", "頂樓加蓋", "事故屋", "凶宅"]
+    _DEFAULT_MIN_SIZE = 7.0
+    _DEFAULT_EXCLUDE = ["限單人", "限單身", "限女", "頂加", "暗房", "頂樓加蓋", "事故屋", "凶宅"]
     MODE_LABEL = "雙人同住"
+
+
+def _split_keywords(raw: str):
+    """把逗號／分號／換行分隔的關鍵字字串拆成清單。"""
+    if not raw:
+        return []
+    for sep in (";", "\n", "、"):
+        raw = raw.replace(sep, ",")
+    seen, out = set(), []
+    for kw in raw.split(","):
+        kw = kw.strip()
+        if kw and kw not in seen:
+            seen.add(kw)
+            out.append(kw)
+    return out
+
+
+# 1-1. 排除關鍵字（標題或內文命中就過濾掉）
+#   EXCLUDE_KEYWORDS       設了就「完全取代」預設清單
+#   EXTRA_EXCLUDE_KEYWORDS 在預設清單之外「額外追加」，多數情況用這個就好
+_override = _split_keywords(os.getenv("EXCLUDE_KEYWORDS", ""))
+EXCLUDE_KEYWORDS = _override if _override else list(_DEFAULT_EXCLUDE)
+for _kw in _split_keywords(os.getenv("EXTRA_EXCLUDE_KEYWORDS", "")):
+    if _kw not in EXCLUDE_KEYWORDS:
+        EXCLUDE_KEYWORDS.append(_kw)
+
+# 1-2. 最小坪數門檻（低於此值直接過濾）
+MIN_SIZE_SQFT = float(os.getenv("MIN_SIZE_SQFT", str(_DEFAULT_MIN_SIZE)))
 
 # 2. Discord Webhook
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "")

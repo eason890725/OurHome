@@ -241,6 +241,10 @@ CREATE TABLE IF NOT EXISTS houses (
 | `GITHUB_TOKEN` | GitHub Personal Access Token (用於雲端寫回 API) | `ghp_xxxxxxxxxxxxxxxxxxxx` |
 | `TARGET_URL` | 591 搜尋網址 (有多條時可用逗號分隔) | `https://rent.591.com.tw/list?...` |
 | `TARGET_URL_1`~`50` | 分號編號搜尋網址 | `https://rent.591.com.tw/list?...` |
+| `EXTRA_EXCLUDE_KEYWORDS` | 在預設排除清單之外追加關鍵字（逗號分隔） | `樓中樓,夾層` |
+| `EXCLUDE_KEYWORDS` | 完全取代預設排除清單 | `頂樓加蓋,凶宅` |
+| `MIN_SIZE_SQFT` | 最小坪數門檻 | `7.0` |
+| `MAX_LIST_PAGES` | 每個搜尋網址最多翻幾頁（每頁 30 筆） | `3` |
 | `CHECK_INTERVAL_MINUTES` | 巡邏間隔分鐘數 | `10` |
 | `DB_PATH` | SQLite 資料庫檔名 | `rentals.db` |
 | `RENDER` | Render 系統預設環境變數 (自動辨識來源) | `true` |

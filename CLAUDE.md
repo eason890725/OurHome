@@ -74,6 +74,16 @@ playwright install chromium
 - 路網未收錄環狀線。若要修正站名或順序，直接改 `MRT_LINES`，其餘程式碼不需要動。
 - 這是**估算值**，UI 上有標註。實測 166 筆真實資料可辨識 165 筆（99%），其中 124 筆站名來自標題。
 
+### 5.7 標記類欄位一定要納入備份還原
+
+`houses` 有兩個「標記」欄位：`duplicate_of`（重複刊登指向的主物件）與 `excluded_by`（命中的排除關鍵字）。兩者都採「標記而非刪除」，資料仍在庫裡，只是不進儀表板列表。
+
+**`restore_from_backup_json()` 的 INSERT 必須包含它們。** 曾經漏掉 `duplicate_of`，結果每次容器重啟從備份還原就把去重結果清空；而重建標記原本只在巡邏結束時進行，巡邏又一直被重啟中斷，於是儀表板永遠都是未去重的狀態（273 筆裡有 87 筆是重複的）。
+
+因此 `_init_db()` 在 restore 之後會立刻呼叫 `apply_exclude_keywords()` 與 `dedupe_existing()` 重建標記，不依賴巡邏是否跑完。
+
+排除關鍵字由 `config.py` 從環境變數讀取：`EXTRA_EXCLUDE_KEYWORDS` 追加、`EXCLUDE_KEYWORDS` 完全取代。`apply_exclude_keywords()` 會回溯處理既有資料，關鍵字拿掉時也會自動解除標記。
+
 ### 6. 通知的費用欄位由呼叫端負責填
 
 `notifier.send_house_card()` 只做排版，它讀 `house["cost_info"]`，不會自己算。**兩條巡邏路徑都必須在發送前先跑 `parse_rental_costs()`**：`run_crawler_standalone.py`（雲端 24H 實際路徑）與 `main.py`（本地路徑）。漏掉的話卡片費用欄位會顯示「未估算」。
