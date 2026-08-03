@@ -12,6 +12,8 @@ rentals.db
 # 防止本地舊資料覆蓋雲端的機制在 main.py 的 auto_git_pull()：
 # 每次巡邏前先 `git checkout -- rentals_backup.json` 丟棄本地變更，再 git pull。
 rentals_backup.json.tmp
+rentals_backup.json.*.tmp
+crawler.lock
 
 # Python 暫存
 __pycache__/

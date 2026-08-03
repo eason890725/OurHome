@@ -1,9 +1,49 @@
 import sys
 import os
 import time
+import json
 import logging
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# 巡邏執行鎖。父程序若被重啟，Popen 出來的子程序不一定會被回收，
+# 累積下來會有多個爬蟲同時跑，互相搶記憶體、也會搶著寫備份檔。
+LOCK_FILE = "crawler.lock"
+LOCK_STALE_SECONDS = 900          # 超過 15 分鐘視為殘留鎖，直接接手
+
+
+def _acquire_lock(logger) -> bool:
+    """取得單一執行權。已有其他爬蟲在跑就回傳 False。"""
+    now = time.time()
+    if os.path.exists(LOCK_FILE):
+        try:
+            with open(LOCK_FILE, "r", encoding="utf-8") as f:
+                info = json.load(f)
+            age = now - float(info.get("time", 0))
+            if age < LOCK_STALE_SECONDS:
+                logger.warning(
+                    f"⏭️ 已有另一個爬蟲在執行中（PID {info.get('pid')}，{age:.0f} 秒前啟動），本次跳過。"
+                )
+                return False
+            logger.warning(f"🔓 發現殘留的執行鎖（{age:.0f} 秒前），直接接手。")
+        except Exception:
+            pass                   # 鎖檔壞掉就當作沒有
+
+    try:
+        with open(LOCK_FILE, "w", encoding="utf-8") as f:
+            json.dump({"pid": os.getpid(), "time": now}, f)
+        return True
+    except Exception as e:
+        logger.warning(f"無法建立執行鎖（不影響巡邏）: {e}")
+        return True
+
+
+def _release_lock():
+    try:
+        if os.path.exists(LOCK_FILE):
+            os.remove(LOCK_FILE)
+    except Exception:
+        pass
 
 from db import HousingDB
 from scraper import RentalScraper
@@ -15,7 +55,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(na
 logger = logging.getLogger("StandaloneCrawler")
 
 def main():
-    logger.info("=== 獨立子程序爬蟲啟動 (完全獨立進程、無 Lock 無死鎖) ===")
+    logger.info("=== 獨立子程序爬蟲啟動 ===")
+    if not _acquire_lock(logger):
+        return
     scraper = RentalScraper()
     db = HousingDB(DB_PATH)
     notifier = DiscordNotifier(DISCORD_WEBHOOK_URL)
@@ -61,6 +103,8 @@ def main():
 
     except Exception as e:
         logger.error(f"獨立子程序巡邏異常: {e}")
+    finally:
+        _release_lock()
 
 if __name__ == "__main__":
     main()

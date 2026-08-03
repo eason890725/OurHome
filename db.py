@@ -19,6 +19,39 @@ logger = logging.getLogger(__name__)
 GITHUB_REPO = os.getenv("GITHUB_REPO", "eason890725/OurHome")
 GITHUB_FILE_PATH = os.getenv("GITHUB_FILE_PATH", "rentals_backup.json")
 _LAST_PUSHED_HASH = ""
+# 上一次回推失敗、還有內容沒送上去。為 True 時不可套用「與硬碟相同就跳過」的閘門，
+# 因為本地檔案在推送前就已寫入，硬碟內容看起來會跟即將要推的一樣。
+_PUSH_PENDING = False
+
+def canonical_hash(houses: List[Dict[str, Any]]) -> str:
+    """內容雜湊，對排序與格式免疫。
+
+    不能直接對 json.dumps 的位元組取雜湊：`ORDER BY created_at DESC` 在時間戳相同時
+    順序未定義，縮排寫法也可能不同，兩者都會讓「內容其實一樣」被誤判成有變更。
+    這裡固定以 house_id 排序、鍵名排序後再取雜湊。
+    """
+    try:
+        canon = json.dumps(
+            sorted(houses, key=lambda h: str(h.get("house_id", ""))),
+            ensure_ascii=False, sort_keys=True
+        )
+        return hashlib.md5(canon.encode("utf-8")).hexdigest()
+    except Exception:
+        return ""
+
+
+def _disk_backup_hash() -> str:
+    """硬碟上 rentals_backup.json 的內容雜湊。
+
+    開機時那份是剛從 GitHub 下載的，因此可以用來判斷
+    「即將要推的內容是不是跟 GitHub 上完全相同」，而且**跨程序重啟仍然有效**。
+    """
+    try:
+        with open("rentals_backup.json", "r", encoding="utf-8") as f:
+            return canonical_hash(json.loads(sanitize_text(f.read())))
+    except Exception:
+        return ""
+
 
 def sanitize_text(text: str) -> str:
     if not text:
@@ -213,7 +246,7 @@ class HousingDB:
         2. `_LAST_PUSHED_HASH` 只在「確定推送成功」後才更新，
            否則推送失敗會被永久記成已推送，直到 DB 內容再次變動才重試。
         """
-        global _LAST_PUSHED_HASH
+        global _LAST_PUSHED_HASH, _PUSH_PENDING
         houses = self.get_all_houses()
         if not houses:
             return
@@ -229,13 +262,24 @@ class HousingDB:
 
         try:
             json_bytes = json.dumps(houses, ensure_ascii=False, indent=2).encode("utf-8")
-            current_hash = hashlib.md5(json_bytes).hexdigest()
+            current_hash = canonical_hash(houses)
 
-            # 若 Hash 沒有變更且非強制，直接跳過 (完全不寫硬碟也不呼叫 API)
+            # 閘門一：本程序這輪已經推過同樣內容
             if not force_push and current_hash == _LAST_PUSHED_HASH:
                 return
 
-            tmp_file = "rentals_backup.json.tmp"
+            # 閘門二：跟硬碟上那份（開機時剛從 GitHub 下載）比對。
+            # _LAST_PUSHED_HASH 是程序內變數，重啟後歸零，光靠它擋不住
+            # 「重啟 → 還原 → 內容其實一模一樣卻照推」的情況；
+            # 服務每 2.5 分鐘重啟一次時，這會變成每 2.5 分鐘一個 GitHub commit。
+            # 有待推內容時不能套用，否則上次失敗的推送會被誤判成已完成。
+            if not force_push and not _PUSH_PENDING and current_hash == _disk_backup_hash():
+                _LAST_PUSHED_HASH = current_hash
+                return
+
+            # 暫存檔名帶上 PID：Web 程序與爬蟲子程序可能同時寫入，
+            # 共用檔名會讓其中一個 os.replace 找不到檔案而拋錯。
+            tmp_file = f"rentals_backup.json.{os.getpid()}.tmp"
             with open(tmp_file, "wb") as f:
                 f.write(json_bytes)
             os.replace(tmp_file, "rentals_backup.json")
@@ -250,7 +294,9 @@ class HousingDB:
             # 防線 2：推成功才記錄 hash，失敗就維持舊值讓下次自動重試
             if self._push_to_github_api(token, json_bytes):
                 _LAST_PUSHED_HASH = current_hash
+                _PUSH_PENDING = False
             else:
+                _PUSH_PENDING = True
                 logger.warning("⚠️ 本次 GitHub 回推未成功，保留舊 hash，下次同步會自動重試。")
 
         except Exception as e:
