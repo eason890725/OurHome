@@ -29,10 +29,19 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
+    def _send_no_cache_headers(self):
+        """儀表板的 HTML 內嵌了全部前端邏輯，改版後若瀏覽器沿用快取的舊版，
+        就會出現「新資料 + 舊 JS」——實際發生過：手機看得到「低於行情」標籤，
+        電腦卻看不到。沒有快取標頭時瀏覽器會自行推測，因此必須明確禁止。"""
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+
     def do_GET(self):
         if self.path == "/":
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            self._send_no_cache_headers()
             self.end_headers()
             self.wfile.write(render_dashboard_html(PAGE_TITLE).encode("utf-8"))
         elif self.path == "/api/houses":
@@ -40,6 +49,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Access-Control-Allow-Origin", "*")
+            self._send_no_cache_headers()
             self.end_headers()
             self.wfile.write(json.dumps(houses, ensure_ascii=False).encode("utf-8"))
         else:

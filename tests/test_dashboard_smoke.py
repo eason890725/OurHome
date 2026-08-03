@@ -50,7 +50,17 @@ check("dashboard / 回傳 HTML", html.startswith("<!DOCTYPE html>"), f"{len(html
 check("dashboard 標題正確", "<title>OurHome 租屋品質與成本儀表板</title>" in html)
 check("無殘留樣板佔位符", "__PAGE_TITLE__" not in html)
 
+# 沒有 Cache-Control 時瀏覽器會自行推測快取時間，改版後就會出現
+# 「新資料 + 舊 JS」——實際發生過：手機看得到新標籤，電腦卻看不到。
+html_resp = urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=10)
+cc = html_resp.headers.get("Cache-Control", "")
+check("HTML 有送出禁止快取的標頭", "no-store" in cc or "no-cache" in cc, repr(cc))
+
 resp = urllib.request.urlopen(f"http://127.0.0.1:{PORT}/api/houses", timeout=15)
+check("API 也有禁止快取的標頭",
+      "no-store" in resp.headers.get("Cache-Control", "") or
+      "no-cache" in resp.headers.get("Cache-Control", ""),
+      repr(resp.headers.get("Cache-Control")))
 houses = json.loads(resp.read().decode("utf-8"))
 check("/api/houses 是合法 JSON", isinstance(houses, list), f"{len(houses)} 筆")
 check("/api/houses Content-Type 正確",

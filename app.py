@@ -33,14 +33,28 @@ def get_formatted_houses_cached():
     return get_formatted_houses(db)
 
 
+# 儀表板的 HTML 內嵌了全部前端邏輯，改版後若瀏覽器仍用快取的舊版，
+# 就會出現「新資料 + 舊 JS」——實際發生過：手機看得到「低於行情」標籤，
+# 電腦卻看不到，因為桌機瀏覽器沿用了舊的 HTML。
+# 這個回應沒有任何快取標頭時，瀏覽器會自行推測快取時間，因此必須明確禁止。
+NO_CACHE_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
+
+
 @app.route("/")
 def index():
-    return render_dashboard_html(PAGE_TITLE)
+    return render_dashboard_html(PAGE_TITLE), 200, {
+        "Content-Type": "text/html; charset=utf-8", **NO_CACHE_HEADERS
+    }
 
 @app.route("/api/houses")
 def api_houses():
-    houses = get_formatted_houses_cached()
-    return jsonify(houses)
+    resp = jsonify(get_formatted_houses_cached())
+    resp.headers.update(NO_CACHE_HEADERS)
+    return resp
 
 @app.route("/api/rating", methods=["POST"])
 def api_rating():
