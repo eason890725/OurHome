@@ -205,9 +205,15 @@ def get_formatted_houses(db, scraper=None):
         h["couples_warnings"] = detect_couples_warnings(full_text)
         h["couples_features"] = detect_couples_features(full_text)
         h["price_drop"] = annotate_price_drop(h)
-        # 通勤估算是純離線計算（找站名 + 路網最短路徑），很快，直接在這裡算。
-        # 標題優先，找不到才看內文——內文常順帶提到別的車站。
-        h["commute"] = commute.estimate(h.get("title", ""), fallback_text=h.get("details_text", ""))
+        # 通勤估算是純離線計算（路網最短路徑），很快，直接在這裡算。
+        # 591 卡片上就有「距○○站 N 公尺」，比從標題猜可靠得多，優先採用；
+        # 舊資料沒有這個欄位，才退回從標題／內文推測。
+        h["commute"] = commute.estimate(
+            h.get("title", ""),
+            fallback_text=h.get("details_text", ""),
+            known_station=h.get("mrt_station"),
+            walk_distance_m=h.get("mrt_distance"),
+        )
 
     # 行情基準線要先看過全部房源才算得出中位數，因此獨立跑第二輪
     baseline = build_market_baseline(houses)

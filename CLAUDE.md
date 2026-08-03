@@ -52,9 +52,14 @@ playwright install chromium
 
 資料若出事可從 git 歷史還原：每次雲端 auto-sync 都是一個 commit，`git log --oneline -- rentals_backup.json`。
 
-### 4. 爬蟲的兩階段記憶體策略不能破壞
+### 4. 爬蟲是純 HTTP，**不要再引入瀏覽器**
 
-`scraper.py` `fetch_single_url()`：階段一 Playwright 只做 DOM 擷取，抓完立刻 `browser.close()` + `gc.collect()`；階段二完全用 `requests` 打 591 內頁。**不要把內頁抓取搬回 Playwright 階段內**，那會讓 Render 512MB 容器 OOM。`context.route` 阻擋 image/font/media/stylesheet 也是省記憶體的關鍵。
+591 的搜尋結果頁是 Nuxt SSR，欄位都在 HTML 裡，`parse_list_html()` 直接解析 `div.item` 就能取得標題／租金／坪數／樓層／結構化地址／最近捷運站與距離／額外費用。
+
+- 曾經用 Playwright 擷取 DOM，實測 Chromium 在 591 頁面上吃掉 300~400MB，加上 Web 程序突破 Render 512MB 上限，造成連續數日的 `Ran out of memory`。改純 HTTP 後 Python 峰值只有 21.7MB。**任何「改回瀏覽器」的提案都要先確認記憶體預算。**
+- `MAX_LIST_PAGES`（預設 3）控制每個搜尋網址翻幾頁，591 每頁 30 筆。某頁沒有新物件就提早停止。
+- 卡片提供的 `mrt_station` / `mrt_distance` 比從標題猜可靠，`commute.estimate()` 會優先採用（見第 5.5 節）。
+- `requirements.txt` 已移除 playwright，Dockerfile 也改回 `python:3.11-slim`。**Render 的 Build Command 若還有 `playwright install chromium` 要一併移除**，否則每次 build 都白下載 150MB。
 
 ### 5. 雲端巡邏是獨立子程序，不是執行緒
 

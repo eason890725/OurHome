@@ -230,19 +230,31 @@ def short_dest_name(dest: str) -> str:
 
 
 def estimate(text: str, destinations: Optional[List[str]] = None,
-             fallback_text: str = "") -> Optional[Dict[str, object]]:
+             fallback_text: str = "", known_station: Optional[str] = None,
+             walk_distance_m: Optional[int] = None) -> Optional[Dict[str, object]]:
     """估算某個房源到各目的地的通勤時間。
 
-    先只看 `text`（標題），找不到才退回 `fallback_text`（內文）。
-    分兩段是因為內文常順帶提到別的車站，若混在一起比對容易蓋掉標題寫明的站。
+    `known_station` 是爬蟲從 591 卡片上直接取得的最近捷運站（「距○○站 N 公尺」），
+    有的話一律優先採用——那是 591 自己標的，比從標題猜可靠得多。
+    沒有才退回：先看 `text`（標題），再看 `fallback_text`（內文）。
+    分兩段是因為內文常順帶提到別的車站，混在一起比對容易蓋掉標題寫明的站。
+
+    `walk_distance_m` 有值時，步行時間依實際距離估算（時速約 80 公尺/分鐘），
+    取代預設的固定 5 分鐘。
 
     回傳 {station, items: [{dest, minutes, stops, transfers}], max_minutes, min_minutes}
     找不到捷運站或所有目的地都不可達時回傳 None。
     """
     dests = destinations if destinations is not None else get_destinations()
-    station = find_station(text) or (find_station(fallback_text) if fallback_text else None)
+    station = (canonical(known_station) if known_station else None) \
+        or find_station(text) \
+        or (find_station(fallback_text) if fallback_text else None)
     if not station or not dests:
         return None
+
+    walk = WALK_MINUTES
+    if walk_distance_m and walk_distance_m > 0:
+        walk = max(1.0, round(walk_distance_m / 80.0))
 
     items = []
     for d in dests:
@@ -251,7 +263,7 @@ def estimate(text: str, destinations: Optional[List[str]] = None,
             continue
         items.append({
             "dest": short_dest_name(d),
-            "minutes": int(round(r["minutes"] + WALK_MINUTES)),
+            "minutes": int(round(r["minutes"] + walk)),
             "stops": r["stops"],
             "transfers": r["transfers"],
         })

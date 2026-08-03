@@ -1,13 +1,18 @@
-import json
+"""591 租屋網爬蟲——純 HTTP，不使用瀏覽器。
+
+591 的搜尋結果頁是伺服器端渲染（Nuxt SSR），所有欄位都直接寫在 HTML 裡，
+因此不需要 Playwright／Chromium。這很重要：Chromium 在 591 這種重度頁面上
+browser + renderer 通常吃掉 300~400MB，加上 Web 程序就會超過 Render 免費方案的
+512MB 上限，實際造成連續數日的 Out of memory。改成純 HTTP 之後整個問題消失，
+而且 SSR 的 HTML 反而提供了更多欄位（結構化地址、最近捷運站與距離、額外費用）。
+"""
 import os
 import re
-import gc
 import random
 import time
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 import requests
-from playwright.sync_api import sync_playwright
 
 from config import USER_AGENTS, COOKIES_FILE, EXCLUDE_KEYWORDS, MIN_SIZE_SQFT
 from search_filters import get_target_search_urls, RENT_MIN, RENT_MAX, ALLOWED_SECTIONS
@@ -45,6 +50,115 @@ def parse_sqft(size_str: str) -> float:
     match = re.search(r'(\d+(?:\.\d+)?)', str(size_str))
     return float(match.group(1)) if match else 0.0
 
+# 卡片上的標籤詞，解析標題時要略過
+CARD_TAGS = {
+    "精選", "優選好屋", "近捷運", "新上架", "租金補貼", "可報稅", "拎包入住", "近商圈",
+    "有電梯", "隨時可遷入", "可開伙", "急租", "降價", "免仲介費", "屋主直租",
+    "獨立套房", "分租套房", "整層住家", "雅房", "樓中樓", "車位",
+}
+# 每個搜尋網址最多翻幾頁（591 每頁 30 筆）。頁數越多涵蓋越廣，但請求量也線性增加。
+MAX_LIST_PAGES = int(os.getenv("MAX_LIST_PAGES", "3"))
+
+HOUSE_KINDS = {"獨立套房", "分租套房", "整層住家", "雅房", "樓中樓"}
+
+
+def _visible_lines(block: str) -> List[str]:
+    """把一段 HTML 轉成可見文字行。"""
+    txt = re.sub(r'<script.*?</script>', '', block, flags=re.S)
+    txt = re.sub(r'<style.*?</style>', '', txt, flags=re.S)
+    txt = re.sub(r'<[^>]+>', '\n', txt)
+    out = []
+    for line in txt.split("\n"):
+        line = re.sub(r'\s+', ' ', line).strip()
+        if not line or line.startswith(("data:image", "http", "data-")):
+            continue
+        out.append(line)
+    return out
+
+
+def normalize_station(name: str) -> str:
+    """「松山機場捷運站2號出口」→「松山機場」，去掉出口與捷運字樣。"""
+    n = re.sub(r'\d+號出口.*$', '', (name or "").strip())
+    n = re.sub(r'(捷運站|捷運|站)$', '', n)
+    return n.strip()
+
+
+def parse_list_html(html: str) -> List[Dict[str, Any]]:
+    """從搜尋結果頁 HTML 取出所有物件。
+
+    591 的列表頁是 SSR，每張卡片是一個 `div.item`，可見文字依序是
+    標籤 → 標題 → 房型 → 坪數 → 樓層 → 地址 → 距離捷運 → 仲介 → 租金。
+    """
+    results: List[Dict[str, Any]] = []
+    for raw_block in re.split(r'<div class="item"', html)[1:]:
+        block = raw_block[:8000]
+        m_id = re.search(r'/(\d{7,8})(?:["\?])', block)
+        if not m_id:
+            continue
+        lines = _visible_lines(block)
+
+        # 租金：在「元/月」那一行往前找第一個合理數字
+        price = 0
+        for i, line in enumerate(lines):
+            if line.startswith("元/月"):
+                for back in range(i - 1, max(-1, i - 4), -1):
+                    digits = re.sub(r'[^\d]', '', lines[back])
+                    if digits and int(digits) >= 3000:
+                        price = int(digits)
+                        break
+                if price:
+                    break
+
+        size = next((l for l in lines if re.fullmatch(r'\d+(?:\.\d+)?坪', l)), "")
+        floor = next((l for l in lines if re.fullmatch(r'[\dB]+F?/\d+F', l)), "")
+        # 地址在卡片上是「中山區-吉林路26巷」這種結構化寫法
+        addr_line = next((l for l in lines if re.fullmatch(r'[一-龥]{2,4}區-.+', l)), "")
+        address = addr_line.replace("-", "", 1) if addr_line else ""
+
+        station, distance = "", 0
+        for i, line in enumerate(lines):
+            m = re.fullmatch(r'距(.+)', line)
+            if m and i + 1 < len(lines):
+                m2 = re.fullmatch(r'(\d+)公尺', lines[i + 1])
+                if m2:
+                    station = normalize_station(m.group(1))
+                    distance = int(m2.group(1))
+                    break
+
+        extra_fee = 0
+        m_extra = re.search(r'額外費用\s*([\d,]+)\s*元', block)
+        if m_extra:
+            extra_fee = int(m_extra.group(1).replace(",", ""))
+
+        title = ""
+        for line in lines:
+            if line in CARD_TAGS or len(line) < 6:
+                continue
+            if re.fullmatch(r'[\d,]+', line) or "公尺" in line or line.endswith("坪"):
+                continue
+            title = line
+            break
+
+        kind = next((l for l in lines if l in HOUSE_KINDS), "")
+        house_id = m_id.group(1)
+
+        results.append({
+            "house_id": house_id,
+            "title": sanitize_text(title),
+            "numeric_price": price,
+            "size": size,
+            "floor": floor,
+            "address": sanitize_text(address),
+            "station": station,
+            "station_distance": distance,
+            "extra_fee": extra_fee,
+            "kind": kind,
+            "link": f"https://rent.591.com.tw/{house_id}",
+            "card_text": sanitize_text(" ".join(lines)),
+        })
+    return results
+
+
 def clean_address_string(raw_addr: str) -> str:
     """清理地址字串，剔除『依現場』等前綴與『整層住家出租』等後綴噪訊字詞"""
     if not raw_addr:
@@ -53,11 +167,11 @@ def clean_address_string(raw_addr: str) -> str:
     clean = re.sub(r'^(?:依現場|社區名稱|所屬社區|高樓層|電梯大樓|大廈|無|未知)+', '', raw_addr).strip()
     clean = re.sub(r'(?:整層住家出租|整層住家|獨立套房出租|獨立套房|分租套房|雅房|住家出租|住家|出租)+$', '', clean).strip()
 
-    match = re.search(r'((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉][\s\-–—─]*[\u4e00-\u9fa5\dA-Za-z]+(?:路|街|段|巷|弄|號|大道)?)', clean)
+    match = re.search(r'((?:[一-龥]{2,3}[市縣])?[一-龥]{2,4}[區市鎮鄉][\s\-–—─]*[一-龥\dA-Za-z]+(?:路|街|段|巷|弄|號|大道)?)', clean)
     if match:
         return match.group(1).replace("-", " ").strip()
     
-    dist_match = re.search(r'((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉])', clean)
+    dist_match = re.search(r'((?:[一-龥]{2,3}[市縣])?[一-龥]{2,4}[區市鎮鄉])', clean)
     if dist_match:
         return dist_match.group(1).strip()
 
@@ -132,7 +246,7 @@ class RentalScraper:
 
                 if meta_match:
                     desc = meta_match.group(1)
-                    city_dist_match = re.search(r'((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉])', desc)
+                    city_dist_match = re.search(r'((?:[一-龥]{2,3}[市縣])?[一-龥]{2,4}[區市鎮鄉])', desc)
                     loc_match = re.search(r'位於\s*([^，,：:\n]+)', desc)
                     
                     if city_dist_match and loc_match:
@@ -157,114 +271,74 @@ class RentalScraper:
 
         return sanitize_text(exact_address), sanitize_text(details_text), is_off_market
 
-    def fetch_single_url(self, target_url: str, global_seen_ids: set) -> List[Dict[str, str]]:
+    def fetch_list_page(self, target_url: str) -> str:
+        """純 HTTP 取回搜尋結果頁 HTML。"""
+        headers = {
+            "User-Agent": random.choice(USER_AGENTS),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+        }
+        cookies = {}
+        if os.path.exists(COOKIES_FILE):
+            try:
+                import json as _json
+                with open(COOKIES_FILE, "r", encoding="utf-8") as f:
+                    cookies = {c["name"]: c["value"] for c in _json.load(f) if "name" in c}
+            except Exception:
+                cookies = {}
+        resp = requests.get(target_url, headers=headers, cookies=cookies, timeout=20)
+        resp.encoding = "utf-8"
+        if resp.status_code != 200:
+            logger.error(f"❌ 列表頁回應 HTTP {resp.status_code}: {target_url}")
+            return ""
+        return resp.text
+
+    def fetch_all_pages(self, target_url: str) -> List[Dict[str, Any]]:
+        """依序抓取搜尋結果的前幾頁。
+
+        591 每頁 30 筆，用 `&page=N` 翻頁。某一頁完全沒有新物件就提早停止，
+        避免結果不足時做無謂的請求。
         """
-        階段一：極速使用 Playwright 擷取清單卡片資訊 (2 秒內完成並立即關閉 Chromium)
-        階段二：在純 Python (0 MB 瀏覽器開銷) 環境下完成過濾與 HTTP 內頁補充
-        """
-        raw_items = []
-        ultra_low_memory_args = [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-accelerated-2d-canvas",
-            "--no-first-run",
-            "--no-zygote",
-            "--disable-gpu",
-            "--disable-extensions",
-            "--disable-background-networking",
-            "--disable-background-timer-throttling",
-            "--disable-backgrounding-occluded-windows",
-            "--disable-breakpad",
-            "--disable-component-extensions-with-background-pages",
-            "--disable-ipc-flooding-protection",
-            "--disable-renderer-backgrounding",
-            "--metrics-recording-only",
-            "--mute-audio",
-            "--no-default-browser-check",
-            "--no-pings",
-            "--password-store=basic",
-            "--use-gl=swiftshader",
-            "--v8-cache-options=none",
-            "--js-flags=--max-old-space-size=64"
-        ]
+        collected: Dict[str, Dict[str, Any]] = {}
+        for page in range(1, MAX_LIST_PAGES + 1):
+            url = target_url if page == 1 else f"{target_url}&page={page}"
+            try:
+                html = self.fetch_list_page(url)
+            except Exception as e:
+                logger.error(f"❌ 取得列表頁第 {page} 頁失敗: {e}")
+                break
+            if not html:
+                break
 
-        # === 階段一：Playwright 純做頁面 DOM 擷取，擷完秒關瀏覽器 ===
-        try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True, args=ultra_low_memory_args)
-                context = browser.new_context(
-                    user_agent=random.choice(USER_AGENTS),
-                    viewport={"width": 1280, "height": 800},
-                    device_scale_factor=1
-                )
-                context.route("**/*", lambda route, req: route.abort() if req.resource_type in ["image", "font", "media", "stylesheet"] else route.continue_())
+            items = parse_list_html(html)
+            fresh = [i for i in items if i["house_id"] not in collected]
+            for i in items:
+                collected.setdefault(i["house_id"], i)
+            logger.info(f"   第 {page} 頁：解析 {len(items)} 筆，其中新物件 {len(fresh)} 筆")
 
-                if os.path.exists(COOKIES_FILE):
-                    try:
-                        with open(COOKIES_FILE, "r", encoding="utf-8") as f:
-                            context.add_cookies(json.load(f))
-                    except Exception:
-                        pass
+            if not fresh:
+                break
+            if page < MAX_LIST_PAGES:
+                time.sleep(random.uniform(0.6, 1.2))
+        return list(collected.values())
 
-                page = context.new_page()
-                page.set_default_timeout(20000)
+    def fetch_single_url(self, target_url: str, global_seen_ids: set) -> List[Dict[str, Any]]:
+        """抓取單一搜尋網址並套用過濾條件。全程純 HTTP，不啟動任何瀏覽器。"""
+        raw_items = self.fetch_all_pages(target_url)
+        if not raw_items:
+            return []
+        logger.info(f"列表頁共解析出 {len(raw_items)} 筆原始物件")
 
-                try:
-                    page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
-                except Exception:
-                    try:
-                        page.goto(target_url, wait_until="commit", timeout=10000)
-                    except Exception:
-                        pass
-
-                page.wait_for_timeout(500)
-                for _ in range(2):
-                    page.evaluate("window.scrollBy(0, 1000);")
-                    page.wait_for_timeout(200)
-
-                raw_items = page.eval_on_selector_all(
-                    "div.item-info-title a, a.item-title",
-                    """elements => elements.map(el => {
-                        let container = el.closest('section, div.item, div.list-item, div.rent-item, div.item-info') || el.parentElement.parentElement;
-                        let priceEl = container ? container.querySelector('div.item-info-price, .item-info-price-price, strong, .price') : null;
-                        let priceText = priceEl ? priceEl.innerText.trim() : '';
-                        let text = container ? container.innerText : el.innerText;
-                        
-                        return {
-                            full_text: text,
-                            title: el.innerText.trim(),
-                            link: el.href,
-                            priceText: priceText
-                        };
-                    })"""
-                )
-
-                browser.close()
-        except Exception as e:
-            logger.error(f"Playwright 擷取清單頁面失敗 [{target_url}]: {e}")
-
-        # 手動強制回收垃圾
-        gc.collect()
-
-        # === 階段二：純 Python (0 MB 瀏覽器開銷) 處理過濾與內頁爬取 ===
-        results = []
+        results: List[Dict[str, Any]] = []
         for item in raw_items:
-            full_text = sanitize_text(item.get("full_text", ""))
-            link = item.get("link", "")
-            title = sanitize_text(item.get("title", ""))
-            price_text = item.get("priceText", "")
-
-            id_match = re.search(r'/\w*?(\d{7,8})', link)
-            if not id_match:
-                continue
-
-            house_id = id_match.group(1)
-
+            house_id = item["house_id"]
             if house_id in global_seen_ids:
                 continue
 
-            if self.is_invalid_broker_or_ad(title, link):
+            full_text = item["card_text"]
+            title = item["title"]
+
+            if self.is_invalid_broker_or_ad(title, item["link"]):
                 continue
 
             ex_kw = self.contains_exclude_keyword(full_text)
@@ -272,66 +346,48 @@ class RentalScraper:
                 logger.info(f"🚫 包含黑名單關鍵字『{ex_kw}』，自動過濾: [{house_id}] {title[:20]}")
                 continue
 
-            size_match = re.search(r'(\d+(?:\.\d+)?)\s*坪', full_text)
-            if size_match:
-                sqft = float(size_match.group(1))
-                if sqft < MIN_SIZE_SQFT:
-                    logger.info(f"🚫 坪數 ({sqft} 坪) 小於標準 ({MIN_SIZE_SQFT} 坪)，自動過濾: [{house_id}] {title[:20]}")
-                    continue
+            sqft = parse_sqft(item["size"])
+            if sqft and sqft < MIN_SIZE_SQFT:
+                logger.info(f"🚫 坪數 ({sqft} 坪) 小於標準 ({MIN_SIZE_SQFT} 坪)，自動過濾: [{house_id}] {title[:20]}")
+                continue
 
             if not self.is_in_allowed_sections(full_text):
                 continue
 
-            global_seen_ids.add(house_id)
-
-            raw_address = ""
-            addr_match = re.search(r'((?:[\u4e00-\u9fa5]{2,3}[市縣])?[\u4e00-\u9fa5]{2,4}[區市鎮鄉][\s\-–—─]*[\u4e00-\u9fa5\dA-Za-z]+(?:路|街|段|巷|弄|號|大道)?)', full_text)
-            if addr_match:
-                raw_address = addr_match.group(1)
-
-            exact_addr, details_text, is_off_market = self.fetch_detail_info(house_id, raw_address)
-            combined_text = f"{full_text} {details_text}"
-
-            real_price = 0
-            dom_p_match = re.search(r'([\d,]+)\s*元', price_text)
-            if dom_p_match:
-                parsed_dom_p = parse_numeric_price(dom_p_match.group(1))
-                if parsed_dom_p >= 5000:
-                    real_price = parsed_dom_p
-
-            if real_price == 0:
-                clean_text = re.sub(r'(?:今日|已)?降[\d,]+元|下降[\d,]+元', '', combined_text)
-                all_prices = re.findall(r'([\d,]+)\s*元', clean_text)
-                valid_prices = [parse_numeric_price(p) for p in all_prices if parse_numeric_price(p) >= 5000]
-                if valid_prices:
-                    real_price = valid_prices[0]
-
-            if real_price == 0:
-                logger.info(f"🚫 無法解析有效刊登租金 (＜ 5,000 元)，自動過濾標籤干擾頁面: [{house_id}] {title[:20]}")
+            if item["numeric_price"] < 5000:
+                logger.info(f"🚫 無法解析有效刊登租金: [{house_id}] {title[:20]}")
                 continue
 
-            price_str = f"{real_price:,}元/月"
-            size_str = f"{size_match.group(1)}坪" if size_match else "未標示坪數"
+            global_seen_ids.add(house_id)
 
-            clean_item = {
+            exact_addr, details_text, is_off_market = self.fetch_detail_info(house_id, item["address"])
+            # 卡片上的「額外費用」直接併進 details_text，
+            # cost_calculator 既有的 regex 就能解析到，不必另外傳參數
+            if item["extra_fee"]:
+                details_text = f"額外費用 {item['extra_fee']:,} 元/月 {details_text}"
+
+            results.append({
                 "house_id": house_id,
-                "title": title.split("\n")[0].strip(),
-                "price": price_str,
-                "numeric_price": real_price,
-                "address": exact_addr,
-                "size": size_str,
-                "link": f"https://rent.591.com.tw/{house_id}",
-                "details_text": combined_text,
-                "status": "off_market" if is_off_market else "active"
-            }
-
-            results.append(clean_item)
+                "title": title,
+                "price": f"{item['numeric_price']:,}元/月",
+                "numeric_price": item["numeric_price"],
+                # 卡片上的地址是結構化的，比內頁 og:description 解析出來的更可靠
+                "address": item["address"] or exact_addr,
+                "size": item["size"] or "未標示坪數",
+                "floor": item["floor"],
+                "kind": item["kind"],
+                "mrt_station": item["station"],
+                "mrt_distance": item["station_distance"],
+                "link": item["link"],
+                "details_text": f"{full_text} {details_text}",
+                "status": "off_market" if is_off_market else "active",
+            })
 
         return results
 
-    def fetch_via_playwright(self) -> List[Dict[str, str]]:
+    def fetch_all_urls(self) -> List[Dict[str, Any]]:
         urls = self.target_urls
-        logger.info(f"啟動二階段極速兩秒脫離 Chromium 隔離架構，準備爬取 {len(urls)} 個目標網址...")
+        logger.info(f"啟動純 HTTP 爬蟲（不使用瀏覽器），準備爬取 {len(urls)} 個目標網址...")
         results = []
         global_seen_ids = set()
 
@@ -345,11 +401,14 @@ class RentalScraper:
         logger.info(f"🎯 所有網址爬取完成，全域共抓取到 {len(results)} 筆合格物件！")
         return results
 
-    def run(self) -> List[Dict[str, str]]:
+    # 舊名稱保留，避免其他地方仍在呼叫
+    fetch_via_playwright = fetch_all_urls
+
+    def run(self) -> List[Dict[str, Any]]:
         sleep_time = random.uniform(1.5, 3.5)
         logger.info(f"執行前隨機延遲 {sleep_time:.2f} 秒 (Anti-scraping sleep)")
         time.sleep(sleep_time)
-        return self.fetch_via_playwright()
+        return self.fetch_all_urls()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

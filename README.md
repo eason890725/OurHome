@@ -111,18 +111,33 @@ Render 免費方案硬碟是暫存的，每次重新部署 `rentals.db` 都會�
 
 ## ⚡ 4. 記憶體與爬蟲效能優化 (Memory & Scraper Optimization)
 
-### A. 二階段極速 2 秒脫離 Playwright 架構 ([scraper.py](file:///c:/personl/OurHome/scraper.py))
-1. **階段一 (Playwright 2 秒)**：
-   - 啟動 Chromium，限制 V8 JavaScript Heap 上限 64MB (`--js-flags=--max-old-space-size=64`)。
-   - 使用 `context.route` 100% 阻斷所有 `image`、`font`、`media`、`stylesheet` 網路請求，節省 90% 記憶體。
-   - 滾動頁面 2 次並透過 `eval_on_selector_all` 擷取 DOM 卡片資訊。
-   - **立即呼叫 `browser.close()` 徹底銷毀 Chromium 進程並執行 `gc.collect()`**！
-2. **階段二 (純 Python 0MB 瀏覽器負擔)**：
-   - 針對抓取到的 `house_id`，使用純 Python `requests.get()` 發送 HTTP 請求補充詳細費用與驗證下架狀態。
-   - 強制指定 `resp.encoding = 'utf-8'` 防止 591 頁面解碼中文亂碼。
+### A. 完全不使用瀏覽器 ([scraper.py](file:///c:/personl/OurHome/scraper.py))
 
-### B. 結果：
-- 記憶體峰值從 **450MB+ 直降至 ~30MB**，留給 Render 512MB 免費容器高達 **480MB 的全空安全緩衝**。
+591 的搜尋結果頁是**伺服器端渲染**（Nuxt SSR），所有欄位都直接寫在 HTML 裡，
+因此不需要 Playwright／Chromium：
+
+1. `requests.get()` 取回列表頁 HTML，用 `&page=N` 翻頁（預設 3 頁，`MAX_LIST_PAGES` 可調），
+   某一頁完全沒有新物件就提早停止。
+2. `parse_list_html()` 以 `div.item` 切出每張卡片，解析出
+   標題／租金／坪數／樓層／**結構化地址**／**最近捷運站與距離**／**額外費用**。
+3. 再用純 HTTP 打內頁補充費用細項並驗證下架狀態。
+
+> 曾經的做法是啟動 Chromium 擷取 DOM 後立即關閉。但 Chromium 在 591 這種重度頁面上
+> browser + renderer 通常吃掉 300~400MB，加上 Web 程序就會突破 Render 免費方案的 512MB，
+> 實際造成連續數日的 `Ran out of memory`。純 HTTP 之後這個問題從根本消失。
+
+### B. 結果
+
+| | Playwright 版 | 純 HTTP 版 |
+| :--- | ---: | ---: |
+| Python 記憶體峰值 | — | **21.7 MB** |
+| Chromium 額外開銷 | 300~400 MB | **0** |
+| 單輪抓取筆數（2 個網址） | ~50 | **139** |
+| 管理費解析成功率 | ~25% | **70%** |
+| 取得最近捷運站 | 靠標題猜 | **100%（591 直接標示）** |
+| Docker 映像檔 | ~1.5 GB | ~150 MB |
+
+SSR 的 HTML 反而比 DOM 擷取提供更多欄位，因此準確度也一併提升。
 
 ---
 
