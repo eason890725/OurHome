@@ -175,6 +175,12 @@ FEE_KEYS = (
 # 而 1500 × 342 筆也才 0.5MB，相較原本的 14.3MB 仍是數量級的差距。
 DETAILS_MAX_CHARS = 1500
 
+# 驗證下架時只讀取頁面前段。下架提示（「您查詢的物件不存在」等）出現在
+# 標題與內文開頭，不需要整頁載入。
+OFF_MARKET_SCAN_BYTES = 200_000
+# 每輪巡邏輪流驗證幾筆在架房源
+OFF_MARKET_RECHECK_PER_RUN = int(os.getenv("OFF_MARKET_RECHECK_PER_RUN", "40"))
+
 # 591 頁面內嵌了「站名 + 經緯度」的捷運站清單，裡面的「台電大樓站」
 # 曾被誤判成「依台電計費」而讓電費少算一半。
 # 這裡整組剔除（站名連同座標），而不是丟掉整個片段——
@@ -365,6 +371,36 @@ class RentalScraper:
             logger.error(f"❌ 列表頁回應 HTTP {resp.status_code}: {target_url}")
             return ""
         return resp.text
+
+    def check_off_market(self, house_id: str) -> Optional[bool]:
+        """直接驗證單一房源是否已下架。
+
+        回傳 True=已下架 / False=仍在架上 / None=無法判定（網路錯誤等，不可當成下架）。
+
+        只讀取頁面前段：下架提示出現在標題與內文開頭，不需要整頁載入。
+        每輪要驗證數十筆，全頁下載會白白吃掉記憶體與頻寬。
+        """
+        url = f"https://rent.591.com.tw/{house_id}"
+        headers = {
+            "User-Agent": random.choice(USER_AGENTS),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "zh-TW,zh;q=0.9",
+        }
+        try:
+            resp = requests.get(url, headers=headers, timeout=10, stream=True)
+            try:
+                if resp.status_code in (404, 410):
+                    return True
+                if resp.status_code != 200:
+                    return None                     # 例如 429/5xx，狀態不明
+                chunk = resp.raw.read(OFF_MARKET_SCAN_BYTES, decode_content=True) or b""
+                text = chunk.decode("utf-8", errors="replace")
+                return any(k in text for k in OFF_MARKET_KEYWORDS)
+            finally:
+                resp.close()
+        except Exception as e:
+            logger.debug(f"下架驗證失敗 [{house_id}]: {e}")
+            return None
 
     def fetch_all_pages(self, target_url: str) -> List[Dict[str, Any]]:
         """依序抓取搜尋結果的前幾頁。

@@ -2,6 +2,7 @@ import sys
 import os
 import time
 import json
+import random
 import logging
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -55,6 +56,31 @@ import memlog
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("StandaloneCrawler")
 
+def recheck_off_market(db, scraper, notifier=None):
+    """輪流驗證在架房源是否已下架，回傳新標記為下架的筆數。"""
+    from scraper import OFF_MARKET_RECHECK_PER_RUN
+
+    targets = db.get_houses_to_recheck(OFF_MARKET_RECHECK_PER_RUN)
+    if not targets:
+        return 0
+
+    logger.info(f"🔍 開始輪流驗證 {len(targets)} 筆在架房源是否已下架...")
+    newly_off = 0
+    unknown = 0
+    for h in targets:
+        result = scraper.check_off_market(h["house_id"])
+        if result is None:
+            unknown += 1          # 狀態不明就不動它，避免把暫時性錯誤當成下架
+            continue
+        if db.mark_checked(h["house_id"], result) and result:
+            newly_off += 1
+        time.sleep(random.uniform(0.2, 0.5))
+
+    logger.info(f"🔍 驗證完成：新標記下架 {newly_off} 筆"
+                + (f"，{unknown} 筆狀態不明已略過" if unknown else ""))
+    return newly_off
+
+
 def main():
     logger.info("=== 獨立子程序爬蟲啟動 ===")
     if not _acquire_lock(logger):
@@ -103,6 +129,14 @@ def main():
                     logger.info("沒有新增加或降價的合格物件，不發送通知。")
             else:
                 logger.error("❌ 批量寫入資料庫多次重試後失敗。")
+
+        # 輪流直接驗證在架房源是否已下架。
+        # 不能靠「沒出現在搜尋結果」推斷——資料庫累積數百筆，而每輪只掃有限頁數，
+        # 本來就不可能全部出現。唯一可靠的方式是直接打內頁確認。
+        try:
+            recheck_off_market(db, scraper, notifier)
+        except Exception as e:
+            logger.error(f"下架驗證失敗（不影響巡邏）: {e}")
 
     except Exception as e:
         logger.error(f"獨立子程序巡邏異常: {e}")

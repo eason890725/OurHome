@@ -263,6 +263,10 @@ class HousingDB:
                 cursor.execute("ALTER TABLE houses ADD COLUMN mrt_station TEXT")
             if "mrt_distance" not in columns:
                 cursor.execute("ALTER TABLE houses ADD COLUMN mrt_distance INTEGER")
+            # 上次直接驗證過內頁的時間。用來輪流重新確認房源是否已下架。
+            # 這是運作狀態不是資料，**不會**進備份 JSON（見 sync_backup_json）。
+            if "last_checked_at" not in columns:
+                cursor.execute("ALTER TABLE houses ADD COLUMN last_checked_at TIMESTAMP")
 
             conn.commit()
 
@@ -288,7 +292,10 @@ class HousingDB:
            否則推送失敗會被永久記成已推送，直到 DB 內容再次變動才重試。
         """
         global _LAST_PUSHED_HASH, _PUSH_PENDING
-        houses = self.get_all_houses()
+        # last_checked_at 每輪都會變動，但它是運作狀態而非資料。
+        # 放進備份會讓內容每輪都不同，MD5 閘門失效、每輪多推一次 GitHub。
+        houses = [{k: v for k, v in h.items() if k != "last_checked_at"}
+                  for h in self.get_all_houses()]
         if not houses:
             return
 
@@ -895,6 +902,21 @@ class HousingDB:
             "price_drop_houses": []
         }
 
+        # 出現在搜尋結果就代表還在架上，直接記為「已驗證」。
+        # 這樣輪流驗證的佇列會自然集中在「這輪沒出現」的房源上，
+        # 也就是真正可能已經被租掉的那些。
+        seen_ids = [str(h.get("house_id")) for h in houses_list if h.get("house_id")]
+        if seen_ids:
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            try:
+                with self._get_connection() as conn:
+                    conn.executemany(
+                        "UPDATE houses SET last_checked_at = ? WHERE house_id = ?",
+                        [(now_str, hid) for hid in seen_ids]
+                    )
+            except Exception as e:
+                logger.debug(f"更新驗證時間失敗: {e}")
+
         for house in houses_list:
             res = self.process_house(house)
             if res["action"] == "NEW":
@@ -926,6 +948,54 @@ class HousingDB:
                 conn.execute("PRAGMA wal_checkpoint(TRUNCATE);")
         except Exception as e:
             logger.debug(f"WAL checkpoint 跳過 (可能有其他連線佔用): {e}")
+
+    def get_houses_to_recheck(self, limit: int = 40) -> List[Dict[str, Any]]:
+        """挑出最久沒被直接驗證過的在架房源，供輪流重新確認是否已下架。
+
+        不能靠「沒出現在搜尋結果」來推斷下架：資料庫累積數百筆，
+        而每輪只掃有限的頁數，本來就不可能全部出現。唯一可靠的方式是直接打內頁。
+
+        排序**以驗證時間為主**，有評分的只在同分時優先。
+        若把評分放在第一順位，246 筆評分過的會永遠排在前面，
+        沒評分的就再也輪不到（測試抓到過這個問題）。
+        """
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("""
+                    SELECT house_id, title, user_rating FROM houses
+                    WHERE status = 'active'
+                    ORDER BY
+                        COALESCE(last_checked_at, '') ASC,
+                        CASE WHEN user_rating IS NOT NULL AND user_rating != 'none' THEN 0 ELSE 1 END
+                    LIMIT ?
+                """, (limit,)).fetchall()
+            return [dict(r) for r in rows]
+        except Exception as e:
+            logger.debug(f"查詢待驗證房源失敗: {e}")
+            return []
+
+    def mark_checked(self, house_id: str, is_off_market: bool) -> bool:
+        """記錄某筆房源剛被直接驗證過，回傳狀態是否因此改變。"""
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        new_status = "off_market" if is_off_market else "active"
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            row = cursor.execute("SELECT status, title FROM houses WHERE house_id = ?",
+                                 (str(house_id),)).fetchone()
+            if not row:
+                return False
+            changed = (row["status"] or "active") != new_status
+            if changed:
+                cursor.execute(
+                    "UPDATE houses SET status = ?, updated_at = ?, last_checked_at = ? WHERE house_id = ?",
+                    (new_status, now_str, now_str, str(house_id))
+                )
+                logger.info(f"🏚️ [下架偵測] [{house_id}] {(row['title'] or '')[:24]} → {new_status}")
+            else:
+                # 狀態沒變就只更新驗證時間，不動 updated_at，避免無謂的 GitHub 推送
+                cursor.execute("UPDATE houses SET last_checked_at = ? WHERE house_id = ?",
+                               (now_str, str(house_id)))
+            return changed
 
     def get_known_prices(self) -> Dict[str, int]:
         """{house_id: 目前存的租金}，供爬蟲判斷哪些房源不必再抓內頁。"""

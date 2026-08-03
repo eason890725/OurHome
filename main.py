@@ -93,6 +93,13 @@ class HousingMonitorApp:
             if not new_houses and not price_drop_houses:
                 logger.info("沒有全新上架或未刊登物件，亦無既有物件降價，無須發送通知。")
 
+            # 輪流直接驗證在架房源是否已下架（見 run_crawler_standalone 的說明）
+            try:
+                from run_crawler_standalone import recheck_off_market
+                recheck_off_market(self.db, self.scraper, self.notifier)
+            except Exception as e:
+                logger.error(f"下架驗證失敗（不影響巡邏）: {e}")
+
         except Exception as e:
             logger.error(f"檢查任務執行過程中發生異常: {e}", exc_info=True)
         finally:
