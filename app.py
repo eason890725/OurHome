@@ -14,6 +14,7 @@ from db import HousingDB
 from notifier import DiscordNotifier
 from config import DISCORD_WEBHOOK_URL, DB_PATH, CHECK_INTERVAL_MINUTES
 from ui_shared import get_formatted_houses, invalidate_houses_cache, render_dashboard_html
+import memlog
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("OurHomeCloudApp")
@@ -89,12 +90,15 @@ def keep_render_alive():
 
 def background_crawler_loop():
     logger.info("啟動 24H 雲端自動巡邏背景獨立行程機制...")
+    memlog.start_monitor(60)
     time.sleep(90)
     while True:
         try:
-            logger.info("=== 喚醒獨立子程序爬蟲 (完全不佔用或鎖定 Web GIL) ===")
+            memlog.log_now("巡邏前")
+            logger.info("=== 喚醒獨立子程序爬蟲 ===")
             proc = subprocess.Popen([sys.executable, "run_crawler_standalone.py"])
             proc.wait()
+            memlog.log_now("巡邏後")
         except Exception as e:
             logger.error(f"調用獨立爬蟲失敗: {e}")
 

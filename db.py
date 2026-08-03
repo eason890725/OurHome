@@ -849,6 +849,16 @@ class HousingDB:
         except Exception as e:
             logger.debug(f"WAL checkpoint 跳過 (可能有其他連線佔用): {e}")
 
+    def get_known_prices(self) -> Dict[str, int]:
+        """{house_id: 目前存的租金}，供爬蟲判斷哪些房源不必再抓內頁。"""
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("SELECT house_id, numeric_price FROM houses").fetchall()
+            return {str(r["house_id"]): (r["numeric_price"] or 0) for r in rows}
+        except Exception as e:
+            logger.debug(f"讀取既有租金失敗: {e}")
+            return {}
+
     def get_all_houses(self) -> List[Dict[str, Any]]:
         with self._get_connection() as conn:
             cursor = conn.cursor()

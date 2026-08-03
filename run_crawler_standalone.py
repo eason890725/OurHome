@@ -50,6 +50,7 @@ from scraper import RentalScraper
 from notifier import DiscordNotifier
 from cost_calculator import parse_rental_costs
 from config import DISCORD_WEBHOOK_URL, DB_PATH
+import memlog
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("StandaloneCrawler")
@@ -58,9 +59,11 @@ def main():
     logger.info("=== 獨立子程序爬蟲啟動 ===")
     if not _acquire_lock(logger):
         return
-    scraper = RentalScraper()
     db = HousingDB(DB_PATH)
+    # 把既有租金交給爬蟲，讓它略過「已知且租金未變」的內頁抓取
+    scraper = RentalScraper(known_prices=db.get_known_prices())
     notifier = DiscordNotifier(DISCORD_WEBHOOK_URL)
+    memlog.log_now("爬蟲啟動")
 
     try:
         scraped_houses = scraper.run()
@@ -104,6 +107,7 @@ def main():
     except Exception as e:
         logger.error(f"獨立子程序巡邏異常: {e}")
     finally:
+        memlog.log_now("爬蟲結束")
         _release_lock()
 
 if __name__ == "__main__":

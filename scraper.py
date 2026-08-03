@@ -178,8 +178,15 @@ def clean_address_string(raw_addr: str) -> str:
     return clean if clean else "未提供地址"
 
 class RentalScraper:
-    def __init__(self, target_urls: Optional[List[str]] = None):
+    def __init__(self, target_urls: Optional[List[str]] = None,
+                 known_prices: Optional[Dict[str, int]] = None):
         self.target_urls = target_urls or get_target_search_urls()
+        # {house_id: 已存的租金}。已在資料庫且租金沒變的房源不必再抓內頁：
+        # 它既然出現在搜尋結果就代表還在架上，費用細項也早就存過了。
+        # 翻頁之後每輪有數百筆，這一步省下絕大多數的請求與記憶體。
+        # 租金有變的仍然要抓——降價會連帶更新 details_text，
+        # 若用較貧乏的文字覆蓋，費用估算會退步。
+        self.known_prices = known_prices or {}
 
     def contains_exclude_keyword(self, text: str) -> Optional[str]:
         if not text:
@@ -262,9 +269,18 @@ class RentalScraper:
                     if m_addr:
                         exact_address = clean_address_string(m_addr.group(1).strip())
 
-                clean_lines = [re.sub(r'<[^>]+>', ' ', l).strip() for l in html_text.split('\n') if l.strip()]
-                fee_lines = [l for l in clean_lines if any(k in l for k in ["費用", "管理費", "電費", "水費", "租金包含", "元/月", "一度", "額外費用"])]
-                details_text = " ".join(fee_lines[:15])
+                # 先用關鍵字篩掉絕大多數行，再對留下來的少數行做 regex，
+                # 並在收滿 15 行就停止。原本是先把整頁每一行都跑一次 regex 再篩，
+                # 那會為每個房源額外配置一份與整頁等大的字串串列。
+                FEE_KEYS = ("費用", "管理費", "電費", "水費", "租金包含", "元/月", "一度", "額外費用")
+                fee_lines = []
+                for line in html_text.split('\n'):
+                    if not line.strip() or not any(k in line for k in FEE_KEYS):
+                        continue
+                    fee_lines.append(re.sub(r'<[^>]+>', ' ', line).strip())
+                    if len(fee_lines) >= 15:
+                        break
+                details_text = " ".join(fee_lines)
 
         except Exception as e:
             logger.debug(f"HTTP GET 補充內頁失敗 [{house_id}]: {e}")
@@ -328,6 +344,7 @@ class RentalScraper:
         if not raw_items:
             return []
         logger.info(f"列表頁共解析出 {len(raw_items)} 筆原始物件")
+        skipped_detail = 0
 
         results: List[Dict[str, Any]] = []
         for item in raw_items:
@@ -360,7 +377,12 @@ class RentalScraper:
 
             global_seen_ids.add(house_id)
 
-            exact_addr, details_text, is_off_market = self.fetch_detail_info(house_id, item["address"])
+            if self.known_prices.get(house_id) == item["numeric_price"]:
+                skipped_detail += 1
+                exact_addr, details_text, is_off_market = item["address"], "", False
+            else:
+                exact_addr, details_text, is_off_market = self.fetch_detail_info(house_id, item["address"])
+
             # 卡片上的「額外費用」直接併進 details_text，
             # cost_calculator 既有的 regex 就能解析到，不必另外傳參數
             if item["extra_fee"]:
@@ -383,6 +405,8 @@ class RentalScraper:
                 "status": "off_market" if is_off_market else "active",
             })
 
+        if skipped_detail:
+            logger.info(f"⏩ 略過 {skipped_detail} 筆已知且租金未變的內頁抓取")
         return results
 
     def fetch_all_urls(self) -> List[Dict[str, Any]]:
