@@ -8,6 +8,7 @@
 import re
 import json
 import time
+import hashlib
 import logging
 import statistics
 from typing import Any, Dict, List, Optional
@@ -186,6 +187,10 @@ def annotate_price_drop(house: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 # 儀表板 /api/houses 的記憶體快取存續秒數
 CACHE_TTL_SECONDS = 5
 
+# 送給瀏覽器的 details_text 上限。這個欄位只用於前端的自由文字搜尋，
+# 完整內容沒有必要傳輸；輪詢頻率高，每一 KB 都會被放大。
+API_DETAILS_CHARS = 300
+
 _HOUSES_CACHE = []
 _CACHE_LAST_UPDATE = 0
 
@@ -228,6 +233,31 @@ def get_formatted_houses(db, scraper=None):
     _HOUSES_CACHE = houses
     _CACHE_LAST_UPDATE = now
     return _HOUSES_CACHE
+
+
+def payload_for_api(houses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """精簡要送給瀏覽器的欄位。
+
+    儀表板會定期輪詢，每一 KB 都會乘上輪詢次數。
+    price_history 前端完全沒有使用（降價資訊已由後端算成 price_drop），
+    details_text 只用於自由文字搜尋，不需要完整內容。
+    """
+    slim = []
+    for h in houses:
+        item = {k: v for k, v in h.items() if k not in ("price_history", "details_text")}
+        item["details_text"] = (h.get("details_text") or "")[:API_DETAILS_CHARS]
+        slim.append(item)
+    return slim
+
+
+def compute_etag(payload) -> str:
+    """依內容產生 ETag，讓瀏覽器在資料沒變時拿到 304。
+
+    資料每 CHECK_INTERVAL_MINUTES 分鐘才變一次，但儀表板輪詢頻率高得多，
+    絕大多數請求其實可以只回 304。
+    """
+    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
+    return '"' + hashlib.md5(raw.encode("utf-8")).hexdigest() + '"'
 
 
 def invalidate_houses_cache():
@@ -986,7 +1016,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         fetchHouses();
-        setInterval(fetchHouses, 30000);
+        // 資料每 10 分鐘才由巡邏更新一次，30 秒輪詢一次純粹是浪費頻寬
+        // （免費額度只有 5GB，開著一個分頁一天就能吃掉 2GB）。
+        // 搭配伺服器端的 ETag，沒變動時回 304，這裡的間隔再放寬也不影響即時性。
+        setInterval(fetchHouses, 120000);
     </script>
 </body>
 </html>"""

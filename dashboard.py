@@ -9,7 +9,8 @@ from typing import Dict, Any, List
 
 from db import HousingDB
 from config import DB_PATH
-from ui_shared import get_formatted_houses, invalidate_houses_cache, render_dashboard_html
+from ui_shared import (get_formatted_houses, invalidate_houses_cache,
+                       render_dashboard_html, payload_for_api, compute_etag)
 
 logger = logging.getLogger(__name__)
 
@@ -29,29 +30,43 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
-    def _send_no_cache_headers(self):
-        """儀表板的 HTML 內嵌了全部前端邏輯，改版後若瀏覽器沿用快取的舊版，
-        就會出現「新資料 + 舊 JS」——實際發生過：手機看得到「低於行情」標籤，
-        電腦卻看不到。沒有快取標頭時瀏覽器會自行推測，因此必須明確禁止。"""
-        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+    def _send_no_cache_headers(self, etag=None):
+        """用 no-cache（不是 no-store）：兩者都會強制重新驗證，
+        但 no-store 連帶禁止條件式請求，ETag 就失效了。
+        沒有快取標頭時瀏覽器會自行推測，曾造成「新資料 + 舊 JS」——
+        手機看得到「低於行情」標籤，電腦卻看不到。"""
+        self.send_header("Cache-Control", "no-cache, must-revalidate")
         self.send_header("Pragma", "no-cache")
-        self.send_header("Expires", "0")
+        if etag:
+            self.send_header("ETag", etag)
+
+    def _respond(self, body: bytes, content_type: str, etag: str, extra=None):
+        """內容未變更就回 304，避免重複傳輸整份內容。"""
+        if self.headers.get("If-None-Match") == etag:
+            self.send_response(304)
+            self._send_no_cache_headers(etag)
+            self.end_headers()
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        for k, v in (extra or {}).items():
+            self.send_header(k, v)
+        self._send_no_cache_headers(etag)
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_GET(self):
         if self.path == "/":
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self._send_no_cache_headers()
-            self.end_headers()
-            self.wfile.write(render_dashboard_html(PAGE_TITLE).encode("utf-8"))
+            html = render_dashboard_html(PAGE_TITLE)
+            self._respond(html.encode("utf-8"), "text/html; charset=utf-8", compute_etag(html))
+        elif self.path == "/healthz":
+            self._respond(b"ok", "text/plain", '"ok"')
         elif self.path == "/api/houses":
-            houses = get_formatted_houses_cached()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self._send_no_cache_headers()
-            self.end_headers()
-            self.wfile.write(json.dumps(houses, ensure_ascii=False).encode("utf-8"))
+            payload = payload_for_api(get_formatted_houses_cached())
+            body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            self._respond(body, "application/json; charset=utf-8", compute_etag(payload),
+                          {"Access-Control-Allow-Origin": "*"})
         else:
             self.send_response(404)
             self.end_headers()

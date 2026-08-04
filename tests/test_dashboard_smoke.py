@@ -56,12 +56,46 @@ html_resp = urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=10)
 cc = html_resp.headers.get("Cache-Control", "")
 check("HTML 有送出禁止快取的標頭", "no-store" in cc or "no-cache" in cc, repr(cc))
 
+check("HTML 有 ETag", bool(html_resp.headers.get("ETag")), repr(html_resp.headers.get("ETag")))
+# no-store 會連帶禁止條件式請求，ETag 就失效了，因此必須是 no-cache
+check("HTML 用的是 no-cache 而非 no-store", "no-store" not in cc, repr(cc))
+
 resp = urllib.request.urlopen(f"http://127.0.0.1:{PORT}/api/houses", timeout=15)
-check("API 也有禁止快取的標頭",
-      "no-store" in resp.headers.get("Cache-Control", "") or
-      "no-cache" in resp.headers.get("Cache-Control", ""),
+api_etag = resp.headers.get("ETag")
+check("API 也有禁止快取的標頭", "no-cache" in resp.headers.get("Cache-Control", ""),
       repr(resp.headers.get("Cache-Control")))
+check("API 有 ETag", bool(api_etag), repr(api_etag))
 houses = json.loads(resp.read().decode("utf-8"))
+
+
+def conditional_status(path, etag):
+    """帶 If-None-Match 再取一次，內容沒變應該回 304。"""
+    req = urllib.request.Request(f"http://127.0.0.1:{PORT}{path}")
+    req.add_header("If-None-Match", etag)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return r.status, len(r.read())
+    except urllib.error.HTTPError as e:
+        return e.code, 0
+
+
+# 資料每 10 分鐘才變一次，但儀表板輪詢頻率高得多。
+# 沒有 304 的話等於每次都整包重傳，免費頻寬 5GB 很快就會用完。
+st, ln = conditional_status("/api/houses", api_etag)
+check("API 內容未變時回 304", st == 304, f"HTTP {st}")
+check("304 不傳內容", ln == 0, f"{ln} bytes")
+st, ln = conditional_status("/", html_resp.headers.get("ETag"))
+check("HTML 內容未變時回 304", st == 304, f"HTTP {st}")
+
+hz = urllib.request.urlopen(f"http://127.0.0.1:{PORT}/healthz", timeout=10)
+hz_body = hz.read()
+check("/healthz 可用且極輕量", hz.status == 200 and len(hz_body) < 64,
+      f"{len(hz_body)} bytes")
+
+check("API 不傳 price_history（前端未使用）", "price_history" not in houses[0],
+      str(sorted(houses[0].keys()))[:70])
+check("API 的 details_text 有截斷", len(houses[0].get("details_text") or "") <= 300,
+      str(len(houses[0].get("details_text") or "")))
 check("/api/houses 是合法 JSON", isinstance(houses, list), f"{len(houses)} 筆")
 check("/api/houses Content-Type 正確",
       resp.headers.get("Content-Type", "").startswith("application/json"))
@@ -96,8 +130,10 @@ else:
     page_title = next(n.value.value for n in tree.body
                       if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "PAGE_TITLE")
     body = ui_shared.render_dashboard_html(page_title)
-    check("app.py index() 使用 render_dashboard_html",
-          "return render_dashboard_html(PAGE_TITLE)" in app_src)
+    check("app.py index() 使用共用模板",
+          "render_dashboard_html(PAGE_TITLE)" in app_src)
+    check("app.py 有 ETag 條件式回應", "If-None-Match" in app_src)
+    check("app.py 有 /healthz 端點", "/healthz" in app_src)
     check("app.py 已無內嵌 HTML_TEMPLATE", "HTML_TEMPLATE" not in app_src)
 
 check("app.py 端標題為雲端版",

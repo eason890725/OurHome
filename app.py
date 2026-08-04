@@ -13,7 +13,8 @@ from flask import Flask, jsonify, request
 from db import HousingDB
 from notifier import DiscordNotifier
 from config import DISCORD_WEBHOOK_URL, DB_PATH, CHECK_INTERVAL_MINUTES
-from ui_shared import get_formatted_houses, invalidate_houses_cache, render_dashboard_html
+from ui_shared import (get_formatted_houses, invalidate_houses_cache,
+                       render_dashboard_html, payload_for_api, compute_etag)
 import memlog
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -33,28 +34,47 @@ def get_formatted_houses_cached():
     return get_formatted_houses(db)
 
 
-# 儀表板的 HTML 內嵌了全部前端邏輯，改版後若瀏覽器仍用快取的舊版，
-# 就會出現「新資料 + 舊 JS」——實際發生過：手機看得到「低於行情」標籤，
-# 電腦卻看不到，因為桌機瀏覽器沿用了舊的 HTML。
-# 這個回應沒有任何快取標頭時，瀏覽器會自行推測快取時間，因此必須明確禁止。
+# 用 no-cache（不是 no-store）：兩者都會強制瀏覽器每次重新驗證，
+# 但 no-store 連帶禁止條件式請求，ETag 就失效了。
+# 搭配 ETag 之後，內容沒變時回 304，幾乎不耗頻寬——
+# 資料每 10 分鐘才變一次，而儀表板輪詢頻率高得多。
 NO_CACHE_HEADERS = {
-    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    "Cache-Control": "no-cache, must-revalidate",
     "Pragma": "no-cache",
-    "Expires": "0",
 }
+
+
+def _conditional(body: str, etag: str, content_type: str):
+    """內容未變更就回 304，避免重複傳輸整份內容。"""
+    if request.headers.get("If-None-Match") == etag:
+        return "", 304, {"ETag": etag, **NO_CACHE_HEADERS}
+    return body, 200, {"Content-Type": content_type, "ETag": etag, **NO_CACHE_HEADERS}
+
+
+@app.route("/healthz")
+def healthz():
+    """防休眠 Ping 專用的極輕量端點。
+
+    原本是 ping 首頁，每次要傳 10KB 的 HTML；每 5 分鐘一次，一個月約 86MB。
+    """
+    return "ok", 200, {"Content-Type": "text/plain", **NO_CACHE_HEADERS}
 
 
 @app.route("/")
 def index():
-    return render_dashboard_html(PAGE_TITLE), 200, {
-        "Content-Type": "text/html; charset=utf-8", **NO_CACHE_HEADERS
-    }
+    html = render_dashboard_html(PAGE_TITLE)
+    return _conditional(html, compute_etag(html), "text/html; charset=utf-8")
 
 @app.route("/api/houses")
 def api_houses():
-    resp = jsonify(get_formatted_houses_cached())
-    resp.headers.update(NO_CACHE_HEADERS)
-    return resp
+    payload = payload_for_api(get_formatted_houses_cached())
+    etag = compute_etag(payload)
+    if request.headers.get("If-None-Match") == etag:
+        return "", 304, {"ETag": etag, **NO_CACHE_HEADERS}
+    body = json.dumps(payload, ensure_ascii=False)
+    return body, 200, {
+        "Content-Type": "application/json; charset=utf-8", "ETag": etag, **NO_CACHE_HEADERS
+    }
 
 @app.route("/api/rating", methods=["POST"])
 def api_rating():
@@ -97,7 +117,9 @@ def keep_render_alive():
         render_url = os.environ.get("RENDER_EXTERNAL_URL") or os.environ.get("KEEP_ALIVE_URL")
         if not render_url:
             return
-        resp = requests.get(f"{render_url.rstrip('/')}/", timeout=10)
+        # 打 /healthz 而不是首頁：首頁每次要傳 10KB HTML，
+        # 每 5 分鐘一次一個月就是 86MB，而免費頻寬只有 5GB。
+        resp = requests.get(f"{render_url.rstrip('/')}/healthz", timeout=10)
         logger.info(f"⚡ 防休眠 Ping 成功 ({render_url}) [Status: {resp.status_code}]")
     except Exception as e:
         logger.debug(f"防休眠 Ping 提示: {e}")
