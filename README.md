@@ -255,15 +255,17 @@ CREATE TABLE IF NOT EXISTS houses (
 
 ### 雲端部署 (Render Cloud Web Service)
 1. 於 Render 新建 **Web Service** 並連接本 GitHub 儲存庫。
-2. Build Command: `pip install -r requirements.txt && playwright install chromium`
+2. 目前是 **Docker 部署**（Dockerfile 已在 repo 內），因此沒有 Build Command 欄位。
+   若改用原生 Python 環境，Build Command 是 `pip install -r requirements.txt`
+   （**不需要** `playwright install chromium`，爬蟲已改為純 HTTP）。
 3. Start Command: `gunicorn app:app --workers 1 --worker-class gthread --threads 4 --timeout 300 --keep-alive 5`
 4. 環境變數：新增 `GITHUB_TOKEN` 與 `DISCORD_WEBHOOK_URL`。
+5. **Build Filters → Ignored Paths 加入 `rentals_backup.json`**，否則雲端每次寫回資料都會觸發重新部署。
 
 ### 本地執行 (Windows PC)
 1. 安裝依賴：`pip install -r requirements.txt`
-2. 安裝 Playwright：`playwright install chromium`
-3. 啟動本機監控與儀表板：`python main.py`
-4. 瀏覽器開啟：`http://localhost:5000`
+2. 啟動本機監控與儀表板：`python main.py`
+3. 瀏覽器開啟：`http://localhost:5000`
 
 ---
 

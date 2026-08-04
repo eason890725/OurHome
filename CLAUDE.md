@@ -58,21 +58,23 @@ playwright install chromium
 
 - 曾經用 Playwright 擷取 DOM，實測 Chromium 在 591 頁面上吃掉 300~400MB，加上 Web 程序突破 Render 512MB 上限，造成連續數日的 `Ran out of memory`。改純 HTTP 後 Python 峰值只有 21.7MB。**任何「改回瀏覽器」的提案都要先確認記憶體預算。**
 - `MAX_LIST_PAGES`（預設 3）控制每個搜尋網址翻幾頁，591 每頁 30 筆。某頁沒有新物件就提早停止。
-- 卡片提供的 `mrt_station` / `mrt_distance` 比從標題猜可靠，`commute.estimate()` 會優先採用（見第 5.5 節）。
+- 卡片提供的 `mrt_station` / `mrt_distance` 會存進 DB，但目前 UI 沒有使用（通勤估算功能已於 2026-08-04 移除，理由見第 5.5 節）。
 - `requirements.txt` 已移除 playwright，Dockerfile 也改回 `python:3.11-slim`。**Render 的 Build Command 若還有 `playwright install chromium` 要一併移除**，否則每次 build 都白下載 150MB。
 
 ### 5. 雲端巡邏是獨立子程序，不是執行緒
 
 `app.py` 模組載入時就 `crawler_thread.start()` 啟動 `background_crawler_loop()`，該迴圈用 `subprocess.Popen([sys.executable, "run_crawler_standalone.py"])` 開獨立進程巡邏，避開 GIL 與 Web 請求互鎖。因為是模組層級啟動，`gunicorn` 必須維持 `--workers 1`，否則每個 worker 都會各開一份爬蟲。
 
-### 5.5 通勤估算是離線的，不要改成呼叫外部 API
+### 5.5 通勤估算功能已移除，不要重做
 
-[commute.py](commute.py) 內建台北捷運路網（`MRT_LINES`），用 Dijkstra 算最短路徑：每站 2 分、轉乘 5 分、步行 5 分。**使用者明確不要需要 API 金鑰的方案**（先前用 Google Distance Matrix 的版本就是因此被放棄的），所以不要再引入 Google Maps／TDX 之類需要註冊金鑰的服務。
+`commute.py`（內建台北捷運路網 + Dijkstra，每站 2 分、轉乘 5 分、步行 5 分）已於 2026-08-04 依使用者要求刪除，理由是**估得不準**。
 
-- `find_station()` 用最長匹配從文字找站名，優先序是「有捷運字樣 > 出現位置較前 > 站名較長」。位置優先於長度是刻意的：`estimate()` 先看標題再退回 `details_text`，內文常順帶提到別的車站。
-- `DISTRICT_COLLISIONS` 擋掉「中山區」被當成中山站這類誤判；站名後接「路街巷弄段號」也會被跳過（例如「南京東路」）。
-- 路網未收錄環狀線。若要修正站名或順序，直接改 `MRT_LINES`，其餘程式碼不需要動。
-- 這是**估算值**，UI 上有標註。實測 166 筆真實資料可辨識 165 筆（99%），其中 124 筆站名來自標題。
+先前的歷程，要重做之前請先看過：
+
+1. 最早的版本用 Google Distance Matrix API，因為需要金鑰與綁信用卡而被使用者自行刪除。
+2. 第二版改為完全離線的路網估算。跑得動、涵蓋率 99%，但固定「每站 2 分鐘」與實際時刻表差距太大，使用者判定不堪用。
+
+**兩個方向都試過了。** 要再做的話得先解決「準確度」這件事本身，而不是再換一種估算方式；而且使用者不接受需要 API 金鑰的方案。
 
 ### 5.7 標記類欄位一定要納入備份還原
 

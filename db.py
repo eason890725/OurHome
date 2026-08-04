@@ -257,8 +257,8 @@ class HousingDB:
             # 記錄關鍵字而不是直接刪除，使用者調整清單後才能回溯生效，也才知道為什麼被濾掉。
             if "excluded_by" not in columns:
                 cursor.execute("ALTER TABLE houses ADD COLUMN excluded_by TEXT")
-            # 591 卡片上直接標示的最近捷運站與距離。爬蟲一直有抓，但先前沒有存下來，
-            # 導致通勤估算只能退回從標題／內文猜。
+            # 591 卡片上直接標示的最近捷運站與距離。目前 UI 沒有使用，
+            # 保留欄位是因為資料已經在庫裡也在備份裡，移除會造成不必要的 schema 變動。
             if "mrt_station" not in columns:
                 cursor.execute("ALTER TABLE houses ADD COLUMN mrt_station TEXT")
             if "mrt_distance" not in columns:

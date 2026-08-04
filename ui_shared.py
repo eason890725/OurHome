@@ -13,7 +13,6 @@ import logging
 import statistics
 from typing import Any, Dict, List, Optional
 
-import commute
 from cost_calculator import parse_rental_costs
 from text_features import detect_couples_warnings, detect_couples_features
 
@@ -213,15 +212,6 @@ def get_formatted_houses(db, scraper=None):
         h["couples_warnings"] = detect_couples_warnings(full_text)
         h["couples_features"] = detect_couples_features(full_text)
         h["price_drop"] = annotate_price_drop(h)
-        # 通勤估算是純離線計算（路網最短路徑），很快，直接在這裡算。
-        # 591 卡片上就有「距○○站 N 公尺」，比從標題猜可靠得多，優先採用；
-        # 舊資料沒有這個欄位，才退回從標題／內文推測。
-        h["commute"] = commute.estimate(
-            h.get("title", ""),
-            fallback_text=h.get("details_text", ""),
-            known_station=h.get("mrt_station"),      # 591 卡片直接標示的，最可靠
-            walk_distance_m=h.get("mrt_distance"),
-        )
 
     # 行情基準線要先看過全部房源才算得出中位數，因此獨立跑第二輪
     baseline = build_market_baseline(houses)
@@ -427,14 +417,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .drop-detail { font-size:0.72rem; color:var(--text-dim); margin-top:4px; }
         .drop-detail s { opacity:0.7; }
 
-        /* 通勤時間 */
-        .commute-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
-        .commute-tag { display:inline-flex; align-items:center; gap:4px; padding:4px 9px; border-radius:8px;
-                       font-size:0.75rem; font-weight:600; background:rgba(59,130,246,0.12);
-                       color:#93c5fd; border:1px solid rgba(59,130,246,0.28); }
-        .commute-fast { background:rgba(16,185,129,0.14); color:#6ee7b7; border-color:rgba(16,185,129,0.3); }
-        .commute-slow { background:rgba(249,115,22,0.12); color:#fb923c; border-color:rgba(249,115,22,0.3); }
-        .commute-note { font-size:0.68rem; color:var(--text-dim); margin-top:4px; opacity:0.75; }
 
         /* 重複刊登 */
         .dup-block { margin-top:10px; }
@@ -595,7 +577,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <option value="size_desc">排序：坪數 (大 ➔ 小)</option>
                     <option value="time_desc">排序：最新上架/更新時間</option>
                     <option value="market_asc">排序：相對行情 (便宜 ➔ 貴)</option>
-                    <option value="commute_asc">排序：通勤時間 (短 ➔ 長)</option>
                     <option value="drop_desc">排序：降價幅度 (大 ➔ 小)</option>
                 </select>
             </div>
@@ -738,7 +719,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="pill ${currentFilter === 'washing' ? 'active' : ''}" data-filter="washing" onclick="setFilter('washing', this)">🧺 獨立洗衣機</div>
                 <div class="pill ${currentFilter === 'below_market' ? 'active' : ''}" data-filter="below_market" onclick="setFilter('below_market', this)">🟢 低於行情 (${allHouses.filter(h => h.market && (h.market.level === 'cheap' || h.market.level === 'below')).length})</div>
                 <div class="pill ${currentFilter === 'dropped' ? 'active' : ''}" data-filter="dropped" onclick="setFilter('dropped', this)">📉 有降價 (${allHouses.filter(h => h.price_drop).length})</div>
-                ${allHouses.some(h => h.commute) ? `<div class="pill ${currentFilter === 'commute30' ? 'active' : ''}" data-filter="commute30" onclick="setFilter('commute30', this)">🚇 通勤 30 分內 (${allHouses.filter(h => h.commute && h.commute.max_minutes <= 30).length})</div>` : ''}
             `;
 
             const districtPillsHtml = Array.from(presentDistricts).sort().map(d => `
@@ -828,7 +808,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 if (currentFilter === 'washing') return SYNONYM_GROUPS[2].some(kw => fullText.includes(kw));
                 if (currentFilter === 'below_market') return h.market && (h.market.level === 'cheap' || h.market.level === 'below');
                 if (currentFilter === 'dropped') return !!h.price_drop;
-                if (currentFilter === 'commute30') return h.commute && h.commute.max_minutes <= 30;
                 if (currentFilter !== 'all') return (h.address || '').includes(currentFilter);
 
                 return true;
@@ -847,12 +826,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 if (sortVal === 'rent_asc') return rentA - rentB;
                 if (sortVal === 'size_desc') return parseSqft(b.size) - parseSqft(a.size);
                 if (sortVal === 'time_desc') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-                if (sortVal === 'commute_asc') {
-                    // 沒有通勤資料的排到最後
-                    const ca = a.commute ? a.commute.max_minutes : 99999;
-                    const cb = b.commute ? b.commute.max_minutes : 99999;
-                    return ca - cb;
-                }
                 if (sortVal === 'market_asc') {
                     const ma = a.market ? a.market.diff_pct : 99999;
                     const mb = b.market ? b.market.diff_pct : 99999;
@@ -898,21 +871,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         ${d.last_change_time ? '・最近 ' + esc(d.last_change_time.slice(0, 10)) : ''}
                     </div>
                 </div>`;
-        }
-
-        function renderCommute(c) {
-            if (!c || !c.items || !c.items.length) return '';
-            const tags = c.items.map(i => {
-                const cls = i.minutes <= 25 ? 'commute-fast' : (i.minutes >= 45 ? 'commute-slow' : '');
-                const detail = i.transfers > 0 ? `${i.stops}站/轉${i.transfers}次` : `${i.stops}站直達`;
-                return `<span class="commute-tag ${cls}" title="${detail}">🚇 ${esc(i.dest)} 約${i.minutes}分</span>`;
-            }).join('');
-            return `
-                <div class="commute-row">
-                    <span class="commute-tag" style="background:rgba(148,163,184,0.12);color:#cbd5e1;border-color:rgba(148,163,184,0.25);">📍 近 ${esc(c.station)}站</span>
-                    ${tags}
-                </div>
-                <div class="commute-note">通勤為路網估算（每站 2 分、轉乘 5 分、步行 5 分），非實際時刻表</div>`;
         }
 
         function toggleDuplicates(houseId) {
@@ -993,7 +951,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                                 <div>💧 水雜費: ${esc(cost.water_desc || '0元')}</div>
                             </div>
                         </div>
-                        ${renderCommute(h.commute)}
                         ${renderDuplicates(h)}
                         <div class="tags-section">
                             ${warnings.map(w => `<div class="tag-warning">${esc(w)}</div>`).join('')}
