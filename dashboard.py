@@ -10,7 +10,7 @@ from typing import Dict, Any, List
 from db import HousingDB
 from config import DB_PATH
 from ui_shared import (get_formatted_houses, invalidate_houses_cache,
-                       render_dashboard_html, payload_for_api, compute_etag)
+                       render_dashboard_html, payload_for_api, compute_etag, etag_matches)
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
 
     def _respond(self, body: bytes, content_type: str, etag: str, extra=None):
         """內容未變更就回 304，避免重複傳輸整份內容。"""
-        if self.headers.get("If-None-Match") == etag:
+        if etag_matches(self.headers.get("If-None-Match"), etag):
             self.send_response(304)
             self._send_no_cache_headers(etag)
             self.end_headers()

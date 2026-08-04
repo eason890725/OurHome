@@ -14,7 +14,7 @@ from db import HousingDB
 from notifier import DiscordNotifier
 from config import DISCORD_WEBHOOK_URL, DB_PATH, CHECK_INTERVAL_MINUTES
 from ui_shared import (get_formatted_houses, invalidate_houses_cache,
-                       render_dashboard_html, payload_for_api, compute_etag)
+                       render_dashboard_html, payload_for_api, compute_etag, etag_matches)
 import memlog
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -46,7 +46,7 @@ NO_CACHE_HEADERS = {
 
 def _conditional(body: str, etag: str, content_type: str):
     """內容未變更就回 304，避免重複傳輸整份內容。"""
-    if request.headers.get("If-None-Match") == etag:
+    if etag_matches(request.headers.get("If-None-Match"), etag):
         return "", 304, {"ETag": etag, **NO_CACHE_HEADERS}
     return body, 200, {"Content-Type": content_type, "ETag": etag, **NO_CACHE_HEADERS}
 
@@ -69,7 +69,7 @@ def index():
 def api_houses():
     payload = payload_for_api(get_formatted_houses_cached())
     etag = compute_etag(payload)
-    if request.headers.get("If-None-Match") == etag:
+    if etag_matches(request.headers.get("If-None-Match"), etag):
         return "", 304, {"ETag": etag, **NO_CACHE_HEADERS}
     body = json.dumps(payload, ensure_ascii=False)
     return body, 200, {

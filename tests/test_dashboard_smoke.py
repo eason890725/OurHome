@@ -87,6 +87,19 @@ check("304 不傳內容", ln == 0, f"{ln} bytes")
 st, ln = conditional_status("/", html_resp.headers.get("ETag"))
 check("HTML 內容未變時回 304", st == 304, f"HTTP {st}")
 
+# Render 前面的 Cloudflare 做 gzip 轉換時會把 ETag 改寫成弱驗證器
+# （送出 "abc"，回到瀏覽器變成 W/"abc"），直接字串比對就永遠不會相等。
+# 實測線上因此完全沒有 304，頻寬修正等於沒生效。
+weak = 'W/' + api_etag
+st, _ = conditional_status("/api/houses", weak)
+check("弱驗證器 W/ 前綴也要認得（Cloudflare 會改寫）", st == 304, f"HTTP {st}")
+st, _ = conditional_status("/api/houses", api_etag.strip('"').join(['"', '-gzip"']))
+check("代理加的 -gzip 後綴也要認得", st == 304, f"HTTP {st}")
+st, _ = conditional_status("/api/houses", f'"nomatch", {weak}')
+check("逗號分隔的多個值也要比對", st == 304, f"HTTP {st}")
+st, _ = conditional_status("/api/houses", '"totally-different-value"')
+check("真的不相符時仍回 200", st == 200, f"HTTP {st}")
+
 hz = urllib.request.urlopen(f"http://127.0.0.1:{PORT}/healthz", timeout=10)
 hz_body = hz.read()
 check("/healthz 可用且極輕量", hz.status == 200 and len(hz_body) < 64,

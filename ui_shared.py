@@ -250,6 +250,34 @@ def compute_etag(payload) -> str:
     return '"' + hashlib.md5(raw.encode("utf-8")).hexdigest() + '"'
 
 
+def etag_matches(if_none_match: Optional[str], etag: str) -> bool:
+    """比對 If-None-Match 與自己產生的 ETag，兩邊都先正規化。
+
+    不能直接用字串相等：Render 前面的 Cloudflare 會做 gzip 轉換，
+    因而把 ETag 改寫成弱驗證器——送出 `"abc"`，實際回到瀏覽器的是 `W/"abc"`，
+    瀏覽器再原樣送回來。直接比對就永遠不相等，304 完全不會發生
+    （實測線上就是這樣，頻寬修正等於沒生效）。
+    也一併處理代理常加的 -gzip 後綴與逗號分隔的多個值。
+    """
+    if not if_none_match:
+        return False
+    if if_none_match.strip() == "*":
+        return True
+
+    def norm(tag: str) -> str:
+        tag = tag.strip()
+        if tag.startswith(("W/", "w/")):
+            tag = tag[2:]
+        tag = tag.strip('"')
+        for suffix in ("-gzip", "-br", "-df"):
+            if tag.endswith(suffix):
+                tag = tag[: -len(suffix)]
+        return tag
+
+    target = norm(etag)
+    return any(norm(t) == target for t in if_none_match.split(","))
+
+
 def invalidate_houses_cache():
     """使用者評分等寫入操作後呼叫，讓下一次 /api/houses 立即讀到新狀態。"""
     global _HOUSES_CACHE, _CACHE_LAST_UPDATE
