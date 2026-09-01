@@ -146,6 +146,30 @@ def collapse_duplicates(houses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             # 主物件；主物件不存在（例如已被清掉）時，這筆自己升為主物件
             primaries.append(h)
 
+    # 主物件下架、但底下還有在架的重複刊登時，把在架那筆換上來當主物件。
+    # 否則「隱藏已下架」會連帶把還租得到的房子一起藏掉。
+    for h in primaries:
+        if h.get("status") != "off_market":
+            continue
+        alive = next((d for d in h["duplicates"] if d.get("status") != "off_market"), None)
+        if alive is None:
+            continue
+        promoted = by_id.get(str(alive.get("house_id")))
+        if promoted is None:
+            continue
+        promoted["duplicates"] = [d for d in h["duplicates"] if d is not alive]
+        promoted["duplicates"].append({
+            "house_id": h.get("house_id"),
+            "title": h.get("title"),
+            "price": h.get("price"),
+            "size": h.get("size"),
+            "address": h.get("address"),
+            "link": h.get("link"),
+            "status": h.get("status"),
+            "user_rating": h.get("user_rating") or "none",
+        })
+        primaries[primaries.index(h)] = promoted
+
     return primaries
 
 
@@ -717,8 +741,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 "東區", "西區", "南區", "北區", "中區", "安平區", "左營區", "鼓山區", "三民區"
             ];
 
+            const onMarket = allHouses.filter(h => h.status !== 'off_market');
+
             const presentDistricts = new Set();
-            allHouses.forEach(h => {
+            onMarket.forEach(h => {
                 const addr = h.address || '';
                 for (const d of knownDistricts) {
                     if (addr.includes(d)) presentDistricts.add(d);
@@ -727,9 +753,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             const countRating = (r) => {
                 if (r === 'none') {
-                    return allHouses.filter(h => (!h.user_rating || h.user_rating === 'none') && h.status !== 'off_market').length;
+                    return onMarket.filter(h => !h.user_rating || h.user_rating === 'none').length;
                 }
-                return allHouses.filter(h => h.user_rating === r).length;
+                return onMarket.filter(h => h.user_rating === r).length;
             };
 
             const countStatus = (s) => allHouses.filter(h => h.status === s).length;
@@ -745,8 +771,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="pill ${currentFilter === 'taipower' ? 'active' : ''}" data-filter="taipower" onclick="setFilter('taipower', this)">✨ 台電神房</div>
                 <div class="pill ${currentFilter === 'balcony' ? 'active' : ''}" data-filter="balcony" onclick="setFilter('balcony', this)">🧺 有獨立陽台</div>
                 <div class="pill ${currentFilter === 'washing' ? 'active' : ''}" data-filter="washing" onclick="setFilter('washing', this)">🧺 獨立洗衣機</div>
-                <div class="pill ${currentFilter === 'below_market' ? 'active' : ''}" data-filter="below_market" onclick="setFilter('below_market', this)">🟢 低於行情 (${allHouses.filter(h => h.market && (h.market.level === 'cheap' || h.market.level === 'below')).length})</div>
-                <div class="pill ${currentFilter === 'dropped' ? 'active' : ''}" data-filter="dropped" onclick="setFilter('dropped', this)">📉 有降價 (${allHouses.filter(h => h.price_drop).length})</div>
+                <div class="pill ${currentFilter === 'below_market' ? 'active' : ''}" data-filter="below_market" onclick="setFilter('below_market', this)">🟢 低於行情 (${onMarket.filter(h => h.market && (h.market.level === 'cheap' || h.market.level === 'below')).length})</div>
+                <div class="pill ${currentFilter === 'dropped' ? 'active' : ''}" data-filter="dropped" onclick="setFilter('dropped', this)">📉 有降價 (${onMarket.filter(h => h.price_drop).length})</div>
             `;
 
             const districtPillsHtml = Array.from(presentDistricts).sort().map(d => `
@@ -757,10 +783,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         function updateStats() {
-            const total = allHouses.length;
-            const unratedCount = allHouses.filter(h => (!h.user_rating || h.user_rating === 'none') && h.status !== 'off_market').length;
-            const likeCount = allHouses.filter(h => h.user_rating === 'like').length;
-            const taipowerCount = allHouses.filter(h => h.cost_info && h.cost_info.is_taipower).length;
+            const onMarket = allHouses.filter(h => h.status !== 'off_market');
+            const total = onMarket.length;
+            const unratedCount = onMarket.filter(h => !h.user_rating || h.user_rating === 'none').length;
+            const likeCount = onMarket.filter(h => h.user_rating === 'like').length;
+            const taipowerCount = onMarket.filter(h => h.cost_info && h.cost_info.is_taipower).length;
             const offmarketCount = allHouses.filter(h => h.status === 'off_market').length;
 
             if (allHouses.length > 0 && allHouses[0].cost_info && allHouses[0].cost_info.mode_label) {
@@ -826,7 +853,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }
 
                 if (currentFilter === 'off_market') return h.status === 'off_market';
-                if (currentFilter === 'unrated') return (!h.user_rating || h.user_rating === 'none') && h.status !== 'off_market';
+                if (h.status === 'off_market') return false;
+                if (currentFilter === 'unrated') return (!h.user_rating || h.user_rating === 'none');
                 if (currentFilter === 'like') return h.user_rating === 'like';
                 if (currentFilter === 'neutral') return h.user_rating === 'neutral';
                 if (currentFilter === 'dislike') return h.user_rating === 'dislike';
