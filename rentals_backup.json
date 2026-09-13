@@ -1,5 +1,26 @@
 [
   {
+    "house_id": "13984695",
+    "title": "💯秒租全新裝潢2房採光佳近捷運公園市場",
+    "price": "29,800元/月",
+    "numeric_price": 29800,
+    "address": "板橋區華江三路",
+    "size": "34.7坪",
+    "link": "https://rent.591.com.tw/13984695",
+    "address_fingerprint": "板橋區華江三路_34.7坪",
+    "price_history": "[{\"price\": \"29,800元/月\", \"numeric\": 29800, \"time\": \"2026-09-13 12:46:40\"}]",
+    "details_text": "💯秒租全新裝潢2房採光佳近捷運公園市場 優選好屋 近捷運 新上架 近商圈 有電梯 隨時可遷入 可開伙 整層住家 2房2廳 34.7坪 7F/18F 德鄰i Carat 板橋區-華江三路 距江子翠站 450公尺 仲介李先生 2分鐘內更新 昨日0人瀏覽 29,800 元/月 權狀登記坪數(室內面積須扣除公設) 7. 不能養寵物 ，不能擺神桌 8. 租金不含管理費 24小時看屋專線 0915-678-571李先生 LINE&nbsp;ID:0915678571 有巢氏房屋-板",
+    "user_rating": "none",
+    "status": "active",
+    "missing_count": 0,
+    "created_at": "2026-09-13 12:46:40",
+    "updated_at": "2026-09-13 12:46:40",
+    "duplicate_of": null,
+    "excluded_by": null,
+    "mrt_station": "江子翠",
+    "mrt_distance": 450
+  },
+  {
     "house_id": "22006151",
     "title": "✨龍山寺站✨採光2房1廳裝潢新✨獨立洗衣機✨乾溼分離",
     "price": "21,999元/月",
