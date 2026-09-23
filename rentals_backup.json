@@ -1,5 +1,26 @@
 [
   {
+    "house_id": "22063762",
+    "title": "近大安森林公園、師大附中、大安捷運站",
+    "price": "27,000元/月",
+    "numeric_price": 27000,
+    "address": "大安區信義路三段",
+    "size": "11.8坪",
+    "link": "https://rent.591.com.tw/22063762",
+    "address_fingerprint": "大安區信義路三段_11.8坪",
+    "price_history": "[{\"price\": \"27,000元/月\", \"numeric\": 27000, \"time\": \"2026-09-23 15:35:16\"}]",
+    "details_text": "精選 近大安森林公園、師大附中、大安捷運站 優選好屋 屋主直租 近捷運 新上架 拎包入住 有電梯 隨時可遷入 獨立套房 11.8坪 4F/14F 成德菁選集 大安區-信義路三段 距大安森林公園 365公尺 屋主陳小姐 4分鐘內更新 昨日0人瀏覽 27,000 元/月 (租金含管理費)",
+    "user_rating": "none",
+    "status": "off_market",
+    "missing_count": 0,
+    "created_at": "2026-09-23 15:35:16",
+    "updated_at": "2026-09-23 15:35:16",
+    "duplicate_of": null,
+    "excluded_by": null,
+    "mrt_station": "大安森林公園",
+    "mrt_distance": 365
+  },
+  {
     "house_id": "22063683",
     "title": "🏠板橋遠東通訊園區⭐獨立套房❤️首次出租﹝可租補﹞",
     "price": "19,800元/月",
