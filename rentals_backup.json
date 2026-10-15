@@ -16,7 +16,7 @@
     "created_at": "2026-10-15 06:26:05",
     "updated_at": "2026-10-15 06:26:05",
     "duplicate_of": null,
-    "excluded_by": null,
+    "excluded_by": "樓中樓",
     "mrt_station": "六張犁",
     "mrt_distance": 128
   },
